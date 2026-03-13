@@ -36,12 +36,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         isOwner(userId) &&
         request.resource.data.keys().hasAll([
-          'uid', 'email', 'createdAt', 'lastLoginAt'
+          'uid', 'email', 'createdAt'
         ]) &&
         request.resource.data.uid == userId &&
         isValidEmail(request.resource.data.email) &&
-        isRecent(request.resource.data.createdAt) &&
-        isRecent(request.resource.data.lastLoginAt);
+        isRecent(request.resource.data.createdAt);
       
       allow update: if isOwner(userId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([

@@ -5,7 +5,18 @@ import {
     signOut,
     updateProfile,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    limit,
+    orderBy,
+    query,
+    serverTimestamp,
+    setDoc,
+    where,
+} from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 export interface UserData {
@@ -17,7 +28,7 @@ export interface UserData {
   momoNumber?: string;
   momoProvider?: "mtn" | "telecel";
   createdAt: any;
-  lastLoginAt: any;
+  lastLoginAt?: any;
   profileImage?: string;
   bio?: string;
   location?: string;
@@ -58,7 +69,6 @@ export const signUp = async (
       momoNumber: userData.momoNumber,
       momoProvider: userData.momoProvider,
       createdAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
       rating: 5.0,
       totalSwaps: 0,
       preferredGames: [],
@@ -99,9 +109,6 @@ export const signIn = async (email: string, password: string) => {
       email,
       password,
     );
-
-    // Update last login
-    await updateUserLastLogin(userCredential.user.uid);
 
     return { success: true, user: userCredential.user };
   } catch (error: any) {
@@ -175,23 +182,30 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
   }
 };
 
-export const updateUserLastLogin = async (uid: string) => {
-  try {
-    await setDoc(
-      doc(db, "users", uid),
-      { lastLoginAt: serverTimestamp() },
-      { merge: true },
-    );
-  } catch (error) {
-    console.error("Error updating last login:", error);
-  }
-};
-
 export const updateUserData = async (uid: string, data: Partial<UserData>) => {
   try {
     await setDoc(doc(db, "users", uid), data, { merge: true });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
+  }
+};
+
+export const getSwapHistory = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, "swapHistory"),
+      where("userId", "==", userId),
+      orderBy("completedAt", "desc"),
+      limit(50),
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error fetching swap history:", error);
+    return [];
   }
 };
