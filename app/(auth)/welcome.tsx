@@ -7,72 +7,166 @@ import {
   Dimensions,
   StatusBar,
   StyleSheet,
+  Easing,
 } from "react-native";
 
 import { router } from "expo-router";
+import { Gamepad2, Headphones, Trophy, MonitorSmartphone } from "lucide-react-native";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.8)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const btnOpacity = useRef(new Animated.Value(0)).current;
-  const btnSlide = useRef(new Animated.Value(24)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+
+  // Floating animations for background elements
+  const float1 = useRef(new Animated.Value(0)).current;
+  const float2 = useRef(new Animated.Value(0)).current;
+  const float3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(logoScale, { toValue: 1, friction: 7, useNativeDriver: true }),
-      ]),
-      Animated.timing(textOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(taglineOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.parallel([
-        Animated.timing(btnOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(btnSlide, { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]),
+    // Entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
     ]).start();
+
+    // Continuous floating animations
+    const createFloatAnimation = (animValue: Animated.Value, duration: number, delay: number = 0) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+            delay: delay,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    createFloatAnimation(float1, 3000).start();
+    createFloatAnimation(float2, 4000, 500).start();
+    createFloatAnimation(float3, 3500, 1000).start();
   }, []);
+
+  const getFloatStyle = (animValue: Animated.Value, distance: number) => ({
+    transform: [
+      {
+        translateY: animValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -distance],
+        }),
+      },
+    ],
+  });
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0e1621" />
+      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
 
-      {/* ── Branding ── */}
-      <View style={styles.brandingWrap}>
-        <Animated.View
-          style={[styles.iconWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
-        >
-          <View style={styles.iconGlow} />
-          <View style={styles.iconBox}>
-            <Text style={styles.iconEmoji}>🎮</Text>
-          </View>
-        </Animated.View>
-
-        <Animated.View style={[styles.nameRow, { opacity: textOpacity }]}>
-          <Text style={styles.nameWhite}>SwapGamers </Text>
-          <Text style={styles.nameGreen}>GH</Text>
-        </Animated.View>
-
-        <Animated.Text style={[styles.tagline, { opacity: taglineOpacity }]}>
-          SWAP. PLAY. REPEAT.
-        </Animated.Text>
+      {/* Decorative Background Elements */}
+      <View style={styles.backgroundDecorations}>
+        <View style={[styles.glowOrb, styles.orbTopLeft]} />
+        <View style={[styles.glowOrb, styles.orbBottomRight]} />
       </View>
 
-      {/* ── Bottom ── */}
-      <Animated.View
-        style={[styles.bottomWrap, { opacity: btnOpacity, transform: [{ translateY: btnSlide }] }]}
-      >
-        <View style={styles.barTrack}>
-          <View style={styles.barFill} />
-        </View>
+      {/* Floating Icons */}
+      <View style={StyleSheet.absoluteFill}>
+        <Animated.View style={[styles.floatingIcon, { top: "15%", left: "10%" }, getFloatStyle(float1, 15)]}>
+          <Headphones size={32} color="rgba(57, 255, 20, 0.2)" />
+        </Animated.View>
+        <Animated.View style={[styles.floatingIcon, { top: "25%", right: "15%" }, getFloatStyle(float2, 20)]}>
+          <Gamepad2 size={40} color="rgba(57, 255, 20, 0.15)" />
+        </Animated.View>
+        <Animated.View style={[styles.floatingIcon, { top: "60%", left: "15%" }, getFloatStyle(float3, 10)]}>
+          <Trophy size={28} color="rgba(57, 255, 20, 0.2)" />
+        </Animated.View>
+        <Animated.View style={[styles.floatingIcon, { top: "50%", right: "10%" }, getFloatStyle(float1, 25)]}>
+          <MonitorSmartphone size={36} color="rgba(57, 255, 20, 0.15)" />
+        </Animated.View>
+      </View>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/signup')} activeOpacity={0.85} style={styles.btn}>
-          <Text style={styles.btnText}>Get Started</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Main Content */}
+      <View style={styles.content}>
+        <Animated.View
+          style={[
+            styles.heroSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={styles.mainIconContainer}>
+            <View style={styles.iconPulseRing1} />
+            <View style={styles.iconPulseRing2} />
+            <View style={styles.iconCore}>
+              <Gamepad2 size={56} color="#0B0F19" fill="#39FF14" />
+            </View>
+          </View>
+
+          <View style={styles.titleContainer}>
+            <Text style={styles.titleText}>SwapGamers</Text>
+            <Text style={styles.badgeText}>GH</Text>
+          </View>
+          
+          <Text style={styles.subtitle}>
+            Your premium hub to trade, discover, and play the best games.
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.footer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.primaryButton}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(auth)/signup")}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+            <View style={styles.buttonArrowContainer}>
+              <Trophy size={20} color="#39FF14" />
+            </View>
+          </TouchableOpacity>
+          
+          <View style={styles.loginContainer}>
+             <Text style={styles.loginText}>Already have an account? </Text>
+             <TouchableOpacity activeOpacity={0.7}>
+               <Text style={styles.loginLink}>Log In</Text>
+             </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -80,91 +174,160 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0e1621",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 60,
-    paddingBottom: 52,
+    backgroundColor: "#0B0F19", // Deep, rich dark background
   },
-  brandingWrap: {
+  backgroundDecorations: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  glowOrb: {
+    position: "absolute",
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: width * 0.4,
+    backgroundColor: "#39FF14", // Neon green
+    opacity: 0.05,
+    filter: "blur(60px)", // Works on web/newer native, acts as fallback
+  },
+  orbTopLeft: {
+    top: -width * 0.2,
+    left: -width * 0.2,
+  },
+  orbBottomRight: {
+    bottom: -width * 0.2,
+    right: -width * 0.2,
+    backgroundColor: "#1D4ED8", // Deep blue subtle mix
+    opacity: 0.08,
+  },
+  floatingIcon: {
+    position: "absolute",
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 80,
+    paddingBottom: 40,
+    justifyContent: "space-between",
+  },
+  heroSection: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconWrap: {
+  mainIconContainer: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 28,
+    marginBottom: 40,
   },
-  iconGlow: {
+  iconCore: {
+    width: 110,
+    height: 110,
+    borderRadius: 35,
+    backgroundColor: "#39FF14",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 3,
+    shadowColor: "#39FF14",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  iconPulseRing1: {
     position: "absolute",
     width: 140,
     height: 140,
-    borderRadius: 70,
-    backgroundColor: "#1aff6b",
-    opacity: 0.08,
+    borderRadius: 45,
+    backgroundColor: "rgba(57, 255, 20, 0.15)",
+    zIndex: 2,
   },
-  iconBox: {
-    width: 108,
-    height: 108,
-    borderRadius: 26,
-    backgroundColor: "#1a3a3a",
-    borderWidth: 1.5,
-    borderColor: "#20c874",
+  iconPulseRing2: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 55,
+    backgroundColor: "rgba(57, 255, 20, 0.05)",
+    zIndex: 1,
+  },
+  titleContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#20c874",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-    elevation: 18,
+    marginBottom: 16,
   },
-  iconEmoji: { fontSize: 52 },
-  nameRow: { flexDirection: "row", alignItems: "baseline" },
-  nameWhite: { fontSize: 34, fontWeight: "800", color: "#ffffff", letterSpacing: 0.2 },
-  nameGreen: { fontSize: 34, fontWeight: "800", color: "#39FF14", letterSpacing: 0.2 },
-  tagline: { marginTop: 10, fontSize: 11.5, letterSpacing: 4, color: "#6b7a8d", fontWeight: "500" },
-
-  bottomWrap: {
-    width: "100%",
-    paddingHorizontal: 28,
-    alignItems: "center",
-    gap: 20,
+  titleText: {
+    fontSize: 42,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: -1,
   },
-  barTrack: {
-    width: width * 0.58,
-    height: 3,
-    backgroundColor: "#1e2a38",
-    borderRadius: 99,
+  badgeText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0B0F19",
+    backgroundColor: "#39FF14",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
     overflow: "hidden",
   },
-  barFill: {
-    width: "55%",
-    height: "100%",
-    borderRadius: 99,
-    backgroundColor: "#39FF14",
-    shadowColor: "#39FF14",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 6,
+  subtitle: {
+    fontSize: 16,
+    color: "#8B9BB4",
+    textAlign: "center",
+    lineHeight: 24,
+    fontWeight: "500",
+    paddingHorizontal: 10,
   },
-  btn: {
+  footer: {
     width: "100%",
-    height: 58,
-    borderRadius: 14,
-    backgroundColor: "#39FF14",
+  },
+  primaryButton: {
+    backgroundColor: "rgba(57, 255, 20, 0.1)",
+    borderWidth: 1.5,
+    borderColor: "#39FF14",
+    borderRadius: 20,
+    height: 64,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
     shadowColor: "#39FF14",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: "hidden",
   },
-  btnText: {
-    color: "#0e1621",
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 0.3,
+  primaryButtonText: {
+    color: "#39FF14",
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginRight: 12,
+  },
+  buttonArrowContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(57, 255, 20, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loginContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  loginText: {
+    color: "#64748B",
+    fontSize: 15,
+  },
+  loginLink: {
+    color: "#39FF14",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

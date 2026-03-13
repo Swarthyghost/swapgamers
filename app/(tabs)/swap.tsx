@@ -8,6 +8,7 @@ import {
   TextInput,
   FlatList,
   Platform,
+  SafeAreaView,
 } from 'react-native'
 import React, { useState } from 'react'
 
@@ -72,7 +73,7 @@ const Swap = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1a" />
 
       <ScrollView
@@ -184,17 +185,21 @@ const Swap = () => {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0a0f1a',
+  },
   container: {
     flex: 1,
     backgroundColor: '#0a0f1a',
   },
   scrollContent: {
-    paddingBottom: 90,
+    paddingBottom: 120,
   },
 
   // Header
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 56,
+    paddingTop: 16,
     paddingBottom: 18,
   },
   headerTitle: {

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  SafeAreaView,
 } from 'react-native'
 import React, { useState } from 'react'
 
@@ -83,7 +84,7 @@ const Shop = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0f1a" />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -163,17 +164,21 @@ const Shop = () => {
 
         <View style={{ height: 28 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0a0f1a',
+  },
   container: {
     flex: 1,
     backgroundColor: '#0a0f1a',
   },
   scrollContent: {
-    paddingBottom: 16,
+    paddingBottom: 120,
   },
 
   // Header
@@ -182,7 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 58 : 44,
+    paddingTop: 16,
     paddingBottom: 18,
   },
   headerTitle: {

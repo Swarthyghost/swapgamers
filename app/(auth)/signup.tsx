@@ -1,9 +1,25 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, StatusBar } from 'react-native'
-import React, { useState } from 'react'
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  KeyboardAvoidingView, 
+  Platform, 
+  StatusBar, 
+  SafeAreaView,
+  ScrollView,
+  Animated,
+  Dimensions,
+  Easing
+} from 'react-native'
+import React, { useState, useEffect, useRef } from 'react'
 import { router } from 'expo-router'
+import { Gamepad2, User, Phone, Mail, Lock, Smartphone, Eye, EyeOff } from "lucide-react-native";
+
+const { width, height } = Dimensions.get("window");
 
 const Signup = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -11,354 +27,409 @@ const Signup = () => {
   const [momoNumber, setMomoNumber] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const floatOrb1 = useRef(new Animated.Value(0)).current;
+  const floatOrb2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 40,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const createFloatAnimation = (anim: Animated.Value, duration: number, delay: number = 0) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+            delay,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: duration,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    createFloatAnimation(floatOrb1, 4000).start();
+    createFloatAnimation(floatOrb2, 5000, 1000).start();
+  }, []);
+
+  const getFloatStyle = (animRef: Animated.Value, distance: number) => ({
+    transform: [
+      {
+        translateY: animRef.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -distance],
+        }),
+      },
+    ],
+  });
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1a" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
+
+      {/* Decorative Orbs */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Animated.View style={[styles.glowOrb, styles.orbTopLeft, getFloatStyle(floatOrb1, 20)]} />
+        <Animated.View style={[styles.glowOrb, styles.orbBottomRight, getFloatStyle(floatOrb2, 25)]} />
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Logo & Header */}
-        <View style={styles.header}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoSymbol}>↻</Text>
+        <Animated.ScrollView 
+          contentContainerStyle={styles.content}
+          style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          
+          {/* --- TOP SECTION --- */}
+          <View style={styles.topArea}>
+            <View style={styles.header}>
+              <View style={styles.brandRow}>
+                <View style={styles.iconCoreContainer}>
+                  <Gamepad2 size={16} color="#0B0F19" fill="#1D4ED8" />
+                </View>
+                <Text style={styles.brandName}>SwapGamers GH</Text>
+              </View>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Create Account</Text>
             </View>
-            <Text style={styles.logoText}>SwapCircle GH</Text>
-          </View>
-          <Text style={styles.title}>Create an Account</Text>
-          <Text style={styles.subtitle}>Join the ultimate gaming community in Ghana</Text>
-        </View>
 
-        {/* Tab Toggle */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => router.replace('/(auth)/login')}
-          >
-            <Text style={styles.tabText}>
-              Login
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, styles.tabActive]}
-          >
-            <Text style={[styles.tabText, styles.tabTextActive]}>
-              Sign Up
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Full Name */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>👤</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Kofi Mensah"
-                placeholderTextColor="#3a4460"
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-              />
+            <View style={styles.tabContainer}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.tabInactive} onPress={() => router.replace('/(auth)/login')}>
+                <Text style={styles.tabInactiveText}>Login</Text>
+              </TouchableOpacity>
+              <View style={styles.tabActive}>
+                <Text style={styles.tabActiveText}>Sign Up</Text>
+              </View>
             </View>
           </View>
 
-          {/* Phone Number */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>📞</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+233 55 123 4567"
-                placeholderTextColor="#3a4460"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
+          {/* --- MIDDLE FORM SECTION --- */}
+          <View style={styles.formArea}>
+            <View style={styles.form}>
+              
+              <View style={styles.fieldGroupRow}>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Full Name</Text>
+                  <View style={styles.inputWrapper}>
+                    <User size={16} color="#64748B" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Kofi Mensah"
+                      placeholderTextColor="#475569"
+                      value={fullName}
+                      onChangeText={setFullName}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                </View>
+                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                  <Text style={styles.label}>Phone Number</Text>
+                  <View style={styles.inputWrapper}>
+                    <Phone size={16} color="#64748B" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="055 123 4567"
+                      placeholderTextColor="#475569"
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
+              </View>
 
-          {/* Email */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>✉️</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="kofi.mensah@example.com"
-                placeholderTextColor="#3a4460"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Email Address</Text>
+                <View style={styles.inputWrapper}>
+                  <Mail size={16} color="#64748B" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="kofi@example.com"
+                    placeholderTextColor="#475569"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
 
-          {/* Password */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                style={[styles.input, styles.inputFlex]}
-                placeholder="••••••••"
-                placeholderTextColor="#3a4460"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '🙈'}</Text>
+              <View style={styles.fieldGroupRow}>
+                <View style={[styles.fieldGroup, { flex: 1.2 }]}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <Lock size={16} color="#64748B" />
+                    <TextInput
+                      style={[styles.input, styles.inputFlex]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#475569"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <Eye size={16} color="#39FF14"/> : <EyeOff size={16} color="#64748B"/>}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Mobile Money Number</Text>
+                <View style={[styles.inputWrapper, styles.inputWrapperHighlighted]}>
+                  <Smartphone size={16} color="#39FF14" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="MTN / Telecel Number"
+                    placeholderTextColor="#475569"
+                    value={momoNumber}
+                    onChangeText={setMomoNumber}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+
+            </View>
+
+            <View style={styles.formBottom}>
+              <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={() => router.replace('/home' as any)}>
+                <Text style={styles.primaryButtonText}>Create Account</Text>
+              </TouchableOpacity>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.8}>
+                <Text style={styles.googleIcon}>G</Text>
+                <Text style={styles.secondaryButtonText}>Google</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Mobile Money Setup */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Mobile Money Setup</Text>
-            <View style={[styles.inputWrapper, styles.inputWrapperHighlighted]}>
-              <Text style={styles.inputIcon}>📱</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="MTN MoMo / Telecel Cash Number"
-                placeholderTextColor="#3a4460"
-                value={momoNumber}
-                onChangeText={setMomoNumber}
-                keyboardType="phone-pad"
-              />
-            </View>
+          {/* --- BOTTOM SECTION --- */}
+          <View style={styles.footerArea}>
+            <Text style={styles.termsText}>
+              By signing up, you agree to our <Text style={styles.termsLink}>Terms</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>.
+            </Text>
           </View>
-
-          {/* Create Account Button */}
-          <TouchableOpacity style={styles.createBtn} activeOpacity={0.85} onPress={() => router.replace('/home' as any)}>
-            <Text style={styles.createBtnText}>Create Account</Text>
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google Button */}
-          <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
-            <Text style={styles.googleIcon}>⊙</Text>
-            <Text style={styles.googleBtnText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          {/* Terms */}
-          <Text style={styles.termsText}>
-            By signing up, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms</Text>
-            {' '}and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>.
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          
+        </Animated.ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0B0F19',
+  },
+  glowOrb: {
+    position: "absolute",
+    width: width * 0.7,
+    height: width * 0.7,
+    borderRadius: width * 0.35,
+    backgroundColor: "#1D4ED8", // Blue orb for signup focus
+    opacity: 0.08,
+    filter: "blur(60px)",
+  },
+  orbTopLeft: {
+    top: -width * 0.1,
+    left: -width * 0.2,
+  },
+  orbBottomRight: {
+    bottom: height * 0.1,
+    right: -width * 0.3,
+    backgroundColor: "#39FF14", // Green orb offset
+    opacity: 0.05,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0a0f1a',
   },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 40,
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 22,
+    paddingTop: 8,
+    paddingBottom: 20,
+    justifyContent: 'space-between',
+  },
+  topArea: {
+    flexShrink: 1,
   },
   header: {
-    marginBottom: 28,
+    marginBottom: 10,
   },
-  logoRow: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: 'rgba(29, 78, 216, 0.1)', // Blueish tint
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(29, 78, 216, 0.2)',
   },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#1a2540',
-    borderWidth: 1.5,
-    borderColor: '#22ff88',
+  iconCoreContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#1D4ED8',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 6,
   },
-  logoSymbol: {
-    color: '#22ff88',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  logoText: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  brandName: { color: '#60A5FA', fontSize: 11, fontWeight: '700' },
   title: {
     color: '#ffffff',
     fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 6,
+    fontWeight: '900',
     letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: '#5a6a8a',
-    fontSize: 14,
-    fontWeight: '400',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 10,
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  tab: {
+  tabInactive: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
+  tabInactiveText: { color: '#8B9BB4', fontSize: 13, fontWeight: '600' },
   tabActive: {
-    backgroundColor: '#1e293b',
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#1D4ED8', // Blue accent for signup
+    shadowColor: "#1D4ED8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  tabText: {
-    color: '#4a5568',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#ffffff',
+  tabActiveText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
+  formArea: {
+    flex: 1,
+    justifyContent: 'space-evenly',
   },
   form: {
-    gap: 16,
-  },
-  fieldGroup: {
     gap: 8,
   },
+  fieldGroupRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fieldGroup: {
+    gap: 4,
+  },
   label: {
-    color: '#c8d0e0',
-    fontSize: 13,
+    color: '#E2E8F0',
+    fontSize: 12,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    marginLeft: 2,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#1e2d45',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    gap: 10,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
   inputWrapperHighlighted: {
-    borderColor: '#2563eb',
-    borderWidth: 1.5,
-  },
-  inputIcon: {
-    fontSize: 14,
-    opacity: 0.6,
+    borderColor: 'rgba(57, 255, 20, 0.4)',
+    backgroundColor: 'rgba(57, 255, 20, 0.03)',
   },
   input: {
     flex: 1,
-    color: '#e2e8f0',
-    fontSize: 15,
-    padding: 0,
-  },
-  inputFlex: {
-    flex: 1,
-  },
-  eyeBtn: {
-    padding: 2,
-  },
-  eyeIcon: {
+    color: '#ffffff',
     fontSize: 14,
-    opacity: 0.5,
+    padding: 0,
+    height: 18,
+    fontWeight: '500',
   },
-  createBtn: {
-    backgroundColor: '#22ff88',
-    borderRadius: 10,
-    paddingVertical: 15,
-    alignItems: 'center',
+  inputFlex: { flex: 1 },
+  formBottom: {
+    gap: 8,
     marginTop: 8,
-    shadowColor: '#22ff88',
+  },
+  primaryButton: {
+    backgroundColor: '#39FF14', // Using Green to tie it back
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: '#39FF14',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  createBtnText: {
-    color: '#0a0f1a',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
+  primaryButtonText: { color: '#0B0F19', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginVertical: 4,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#1e2d45',
-  },
-  dividerText: {
-    color: '#3a4460',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  googleBtn: {
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+  dividerText: { color: '#64748B', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111827',
-    borderRadius: 10,
-    paddingVertical: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 14,
+    paddingVertical: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#1e2d45',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  googleIcon: {
-    fontSize: 16,
-    color: '#ffffff',
+  googleIcon: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  secondaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  footerArea: {
+    flexShrink: 0,
+    marginTop: 10,
   },
-  googleBtnText: {
-    color: '#e2e8f0',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  termsText: {
-    color: '#4a5568',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  termsLink: {
-    color: '#22ff88',
-    fontWeight: '600',
-  },
+  termsText: { color: '#64748B', fontSize: 11, textAlign: 'center' },
+  termsLink: { color: '#39FF14', fontWeight: '700' },
 })
 
 export default Signup
