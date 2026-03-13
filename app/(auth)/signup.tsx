@@ -1,31 +1,81 @@
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  KeyboardAvoidingView, 
-  Platform, 
-  StatusBar, 
-  SafeAreaView,
-  ScrollView,
-  Animated,
-  Dimensions,
-  Easing
-} from 'react-native'
-import React, { useState, useEffect, useRef } from 'react'
-import { router } from 'expo-router'
-import { Gamepad2, User, Phone, Mail, Lock, Smartphone, Eye, EyeOff } from "lucide-react-native";
+import { router } from "expo-router";
+import {
+    Eye,
+    EyeOff,
+    Gamepad2,
+    Lock,
+    Mail,
+    Phone,
+    Smartphone,
+    User,
+} from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Alert,
+    Animated,
+    Dimensions,
+    Easing,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useAuth } from "../../contexts/AuthContext";
+import { signUp } from "../../lib/auth";
 
 const { width, height } = Dimensions.get("window");
 
 const Signup = () => {
-  const [fullName, setFullName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [momoNumber, setMomoNumber] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [momoNumber, setMomoNumber] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { setUser } = useAuth();
+
+  const handleSignup = async () => {
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all required fields");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await signUp(email.trim(), password, {
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        momoNumber: momoNumber.trim(),
+        momoProvider:
+          momoNumber.startsWith("055") || momoNumber.startsWith("025")
+            ? "mtn"
+            : "telecel",
+      });
+
+      if (result.success) {
+        setUser(result.user);
+        router.replace("/(tabs)/home" as any);
+      } else {
+        Alert.alert("Signup Failed", result.error);
+      }
+    } catch {
+      Alert.alert("Signup Failed", "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -48,7 +98,11 @@ const Signup = () => {
       }),
     ]).start();
 
-    const createFloatAnimation = (anim: Animated.Value, duration: number, delay: number = 0) => {
+    const createFloatAnimation = (
+      anim: Animated.Value,
+      duration: number,
+      delay: number = 0,
+    ) => {
       return Animated.loop(
         Animated.sequence([
           Animated.timing(anim, {
@@ -64,7 +118,7 @@ const Signup = () => {
             easing: Easing.inOut(Easing.sin),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
     };
 
@@ -89,21 +143,32 @@ const Signup = () => {
 
       {/* Decorative Orbs */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <Animated.View style={[styles.glowOrb, styles.orbTopLeft, getFloatStyle(floatOrb1, 20)]} />
-        <Animated.View style={[styles.glowOrb, styles.orbBottomRight, getFloatStyle(floatOrb2, 25)]} />
+        <Animated.View
+          style={[
+            styles.glowOrb,
+            styles.orbTopLeft,
+            getFloatStyle(floatOrb1, 20),
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.glowOrb,
+            styles.orbBottomRight,
+            getFloatStyle(floatOrb2, 25),
+          ]}
+        />
       </View>
 
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Animated.ScrollView 
+        <Animated.ScrollView
           contentContainerStyle={styles.content}
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          
           {/* --- TOP SECTION --- */}
           <View style={styles.topArea}>
             <View style={styles.header}>
@@ -113,11 +178,17 @@ const Signup = () => {
                 </View>
                 <Text style={styles.brandName}>SwapGamers GH</Text>
               </View>
-              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Create Account</Text>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+                Create Account
+              </Text>
             </View>
 
             <View style={styles.tabContainer}>
-              <TouchableOpacity activeOpacity={0.8} style={styles.tabInactive} onPress={() => router.replace('/(auth)/login')}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.tabInactive}
+                onPress={() => router.replace("/(auth)/login")}
+              >
                 <Text style={styles.tabInactiveText}>Login</Text>
               </TouchableOpacity>
               <View style={styles.tabActive}>
@@ -129,7 +200,6 @@ const Signup = () => {
           {/* --- MIDDLE FORM SECTION --- */}
           <View style={styles.formArea}>
             <View style={styles.form}>
-              
               <View style={styles.fieldGroupRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
                   <Text style={styles.label}>Full Name</Text>
@@ -190,8 +260,15 @@ const Signup = () => {
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                     />
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <Eye size={16} color="#39FF14"/> : <EyeOff size={16} color="#64748B"/>}
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <Eye size={16} color="#39FF14" />
+                      ) : (
+                        <EyeOff size={16} color="#64748B" />
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -199,7 +276,9 @@ const Signup = () => {
 
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>Mobile Money Number</Text>
-                <View style={[styles.inputWrapper, styles.inputWrapperHighlighted]}>
+                <View
+                  style={[styles.inputWrapper, styles.inputWrapperHighlighted]}
+                >
                   <Smartphone size={16} color="#39FF14" />
                   <TextInput
                     style={styles.input}
@@ -211,12 +290,21 @@ const Signup = () => {
                   />
                 </View>
               </View>
-
             </View>
 
             <View style={styles.formBottom}>
-              <TouchableOpacity style={styles.primaryButton} activeOpacity={0.8} onPress={() => router.replace('/home' as any)}>
-                <Text style={styles.primaryButtonText}>Create Account</Text>
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  loading && styles.primaryButtonDisabled,
+                ]}
+                activeOpacity={0.8}
+                onPress={handleSignup}
+                disabled={loading}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {loading ? "Creating Account..." : "Create Account"}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.dividerRow}>
@@ -225,7 +313,10 @@ const Signup = () => {
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.googleIcon}>G</Text>
                 <Text style={styles.secondaryButtonText}>Google</Text>
               </TouchableOpacity>
@@ -235,20 +326,21 @@ const Signup = () => {
           {/* --- BOTTOM SECTION --- */}
           <View style={styles.footerArea}>
             <Text style={styles.termsText}>
-              By signing up, you agree to our <Text style={styles.termsLink}>Terms</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>.
+              By signing up, you agree to our{" "}
+              <Text style={styles.termsLink}>Terms</Text> and{" "}
+              <Text style={styles.termsLink}>Privacy Policy</Text>.
             </Text>
           </View>
-          
         </Animated.ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: "#0B0F19",
   },
   glowOrb: {
     position: "absolute",
@@ -277,7 +369,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 8,
     paddingBottom: 20,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   topArea: {
     flexShrink: 1,
@@ -286,105 +378,105 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(29, 78, 216, 0.1)', // Blueish tint
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(29, 78, 216, 0.1)", // Blueish tint
+    alignSelf: "flex-start",
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(29, 78, 216, 0.2)',
+    borderColor: "rgba(29, 78, 216, 0.2)",
   },
   iconCoreContainer: {
     width: 20,
     height: 20,
     borderRadius: 6,
-    backgroundColor: '#1D4ED8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#1D4ED8",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 6,
   },
-  brandName: { color: '#60A5FA', fontSize: 11, fontWeight: '700' },
+  brandName: { color: "#60A5FA", fontSize: 11, fontWeight: "700" },
   title: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: -0.5,
   },
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     borderRadius: 12,
     padding: 3,
     marginBottom: 10,
     flexShrink: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   tabInactive: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
   },
-  tabInactiveText: { color: '#8B9BB4', fontSize: 13, fontWeight: '600' },
+  tabInactiveText: { color: "#8B9BB4", fontSize: 13, fontWeight: "600" },
   tabActive: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
-    backgroundColor: '#1D4ED8', // Blue accent for signup
+    backgroundColor: "#1D4ED8", // Blue accent for signup
     shadowColor: "#1D4ED8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  tabActiveText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
+  tabActiveText: { color: "#ffffff", fontSize: 13, fontWeight: "800" },
   formArea: {
     flex: 1,
-    justifyContent: 'space-evenly',
+    justifyContent: "space-evenly",
   },
   form: {
     gap: 8,
   },
   fieldGroupRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   fieldGroup: {
     gap: 4,
   },
   label: {
-    color: '#E2E8F0',
+    color: "#E2E8F0",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 2,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: "rgba(255, 255, 255, 0.1)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
   inputWrapperHighlighted: {
-    borderColor: 'rgba(57, 255, 20, 0.4)',
-    backgroundColor: 'rgba(57, 255, 20, 0.03)',
+    borderColor: "rgba(57, 255, 20, 0.4)",
+    backgroundColor: "rgba(57, 255, 20, 0.03)",
   },
   input: {
     flex: 1,
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 14,
     padding: 0,
     height: 18,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   inputFlex: { flex: 1 },
   formBottom: {
@@ -392,44 +484,63 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryButton: {
-    backgroundColor: '#39FF14', // Using Green to tie it back
+    backgroundColor: "#39FF14", // Using Green to tie it back
     borderRadius: 14,
     paddingVertical: 14,
-    alignItems: 'center',
-    shadowColor: '#39FF14',
+    alignItems: "center",
+    shadowColor: "#39FF14",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  primaryButtonText: { color: '#0B0F19', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
+  primaryButtonDisabled: {
+    backgroundColor: "rgba(57, 255, 20, 0.3)",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  primaryButtonText: {
+    color: "#0B0F19",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginVertical: 4,
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-  dividerText: { color: '#64748B', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  dividerText: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
   secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     borderRadius: 14,
     paddingVertical: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  googleIcon: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
-  secondaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  googleIcon: { color: "#ffffff", fontSize: 16, fontWeight: "900" },
+  secondaryButtonText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
   footerArea: {
     flexShrink: 0,
     marginTop: 10,
   },
-  termsText: { color: '#64748B', fontSize: 11, textAlign: 'center' },
-  termsLink: { color: '#39FF14', fontWeight: '700' },
-})
+  termsText: { color: "#64748B", fontSize: 11, textAlign: "center" },
+  termsLink: { color: "#39FF14", fontWeight: "700" },
+});
 
-export default Signup
+export default Signup;
