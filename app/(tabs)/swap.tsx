@@ -1,8 +1,8 @@
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
-  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -13,23 +13,20 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
-import {
-  createGame,
-  createSwapRequest,
-  getUserGames
-} from "../../lib/game-swaps";
+import { getUserGames } from "../../lib/game-swaps";
 
 const FILTERS = ["All Games", "PlayStation", "Xbox", "Switch", "PC"];
 
 const GAMES = [
   {
     id: "1",
-    title: "God of War Ragna...",
+    title: "God of War Ragnarök",
     platform: "PS5",
     platformColor: "#003087",
     status: "available",
     emoji: "⚔️",
     bgColor: "#0a1628",
+    owner: "Kwame",
   },
   {
     id: "2",
@@ -39,16 +36,18 @@ const GAMES = [
     status: "available",
     emoji: "🚗",
     bgColor: "#0d1a10",
+    owner: "Ama",
   },
   {
     id: "3",
-    title: "The Last of Us Par...",
+    title: "The Last of Us Part II",
     platform: "PS5",
     platformColor: "#003087",
     status: "waitlist",
     waitlistCount: 2,
     emoji: "🎸",
     bgColor: "#1a1008",
+    owner: "Yaw",
   },
   {
     id: "4",
@@ -58,35 +57,20 @@ const GAMES = [
     status: "available",
     emoji: "🌌",
     bgColor: "#080d1a",
+    owner: "Kofi",
   },
-];
-
-const NAV_ITEMS = [
-  { id: "home", label: "Home", icon: "⌂" },
-  { id: "swap", label: "Swap", icon: "◎" },
-  { id: "shop", label: "Shop", icon: "🛒" },
-  { id: "community", label: "Community", icon: "👥" },
-  { id: "profile", label: "Profile", icon: "👤" },
 ];
 
 const Swap = () => {
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState("All Games");
   const [search, setSearch] = useState("");
-  const [showAddGame, setShowAddGame] = useState(false);
   const [myGames, setMyGames] = useState<any[]>([]);
-  const [availableGames, setAvailableGames] = useState<any[]>([]);
-  const [showSwapRequest, setShowSwapRequest] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<any>(null);
-  const [selectedMyGame, setSelectedMyGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [newGameTitle, setNewGameTitle] = useState("");
-  const [newGamePlatform, setNewGamePlatform] = useState("");
-  const [newGameDescription, setNewGameDescription] = useState("");
 
   useEffect(() => {
     fetchGames();
-  }, []);
+  }, [user]);
 
   const fetchGames = async () => {
     try {
@@ -94,17 +78,6 @@ const Swap = () => {
         const userGames = await getUserGames(user.uid);
         setMyGames(userGames || []);
       }
-      // For now, use mock data for available games with owner info
-      const mockAvailableGames = GAMES.map((game) => ({
-        ...game,
-        owner: {
-          uid: game.id === "1" ? "user1" : game.id === "2" ? "user2" : "user3",
-          displayName:
-            game.id === "1" ? "Kwame" : game.id === "2" ? "Ama" : "Yaw",
-          avatar: "👤",
-        },
-      }));
-      setAvailableGames(mockAvailableGames);
     } catch (error) {
       console.error("Error fetching games:", error);
     } finally {
@@ -112,44 +85,43 @@ const Swap = () => {
     }
   };
 
-  const handleRequestSwap = (game: any) => {
-    if (!user) {
-      Alert.alert("Login Required", "Please login to request swaps");
-      return;
+  const getFilteredGames = () => {
+    let filtered = GAMES;
+    if (search.trim()) {
+      filtered = filtered.filter((g) =>
+        g.title.toLowerCase().includes(search.toLowerCase())
+      );
     }
-    if (myGames.length === 0) {
-      Alert.alert("No Games", "Please add your games first to request swaps");
-      return;
+    if (activeFilter !== "All Games") {
+      const platformMap: { [key: string]: string } = {
+        PlayStation: "PS5",
+        Xbox: "XBOX",
+        Switch: "Switch",
+        PC: "PC",
+      };
+      const platform = platformMap[activeFilter];
+      if (platform) {
+        filtered = filtered.filter((g) => g.platform === platform);
+      }
     }
-    setSelectedGame(game);
-    setShowSwapRequest(true);
+    return filtered;
   };
 
-  const handleSwapRequestSubmit = async () => {
-    if (!selectedGame || !selectedMyGame) {
-      Alert.alert("Error", "Please select a game to offer");
-      return;
-    }
-
-    try {
-      await createSwapRequest({
-        requesterId: user!.uid,
-        requestedGameId: selectedGame.id,
-        offeredGameId: selectedMyGame.id,
-        status: "pending",
-      });
-
-      Alert.alert(
-        "Success!",
-        `Swap request sent for ${selectedGame.title}!\n\nYou can now chat with ${selectedGame.owner.displayName} to discuss the swap.`,
-      );
-      setShowSwapRequest(false);
-      setSelectedGame(null);
-      setSelectedMyGame(null);
-    } catch (error) {
-      console.error("Error creating swap request:", error);
-      Alert.alert("Error", "Failed to send swap request");
-    }
+  const handleGamePress = (game: any) => {
+    router.push({
+      pathname: "/game-detail",
+      params: {
+        id: game.id,
+        title: game.title,
+        platform: game.platform,
+        platformColor: game.platformColor,
+        emoji: game.emoji,
+        bgColor: game.bgColor,
+        status: game.status,
+        waitlistCount: game.waitlistCount || 0,
+        owner: game.owner,
+      },
+    });
   };
 
   const handleJoinWaitlist = (gameTitle: string) => {
@@ -158,72 +130,15 @@ const Swap = () => {
       return;
     }
     Alert.alert(
-      "Waitlist",
-      `Joined waitlist for: ${gameTitle}\nWe'll notify you when it's available!`,
+      "Waitlist Joined! ✅",
+      `You're on the waitlist for "${gameTitle}". We'll notify you when it becomes available!`
     );
   };
 
-  const handleSwapAgain = () => {
-    Alert.alert("Swap Again", "This feature is coming soon!");
-  };
-
-  const handleAddGame = () => {
-    if (!user) {
-      Alert.alert("Login Required", "Please login to add games");
-      return;
-    }
-    setShowAddGame(true);
-  };
-
-  const handleNotifications = () => {
-    Alert.alert(
-      "Notifications",
-      "You have 3 new swap requests!\n\n- Kwame wants to swap FIFA 24\n- Ama requested Spider-Man 2\n- Yaw is interested in your PS5 games",
-    );
-  };
-
-  const handleSettings = () => {
-    Alert.alert(
-      "Settings",
-      "Settings panel coming soon!\n\nYou'll be able to:\n- Manage swap preferences\n- Set notification preferences\n- View swap history\n- Account settings",
-    );
-  };
-
-  const handleAddGameSubmit = async () => {
-    if (!newGameTitle.trim() || !newGamePlatform) {
-      Alert.alert("Error", "Please fill in game title and platform");
-      return;
-    }
-
-    try {
-      await createGame({
-        title: newGameTitle.trim(),
-        platform: newGamePlatform.toLowerCase(),
-        description: newGameDescription.trim(),
-        owner: user!.uid,
-        available: true,
-        condition: "good",
-        genre: [],
-        releaseYear: new Date().getFullYear(),
-        rating: 0,
-        imageUrl: null,
-      });
-
-      setNewGameTitle("");
-      setNewGamePlatform("");
-      setNewGameDescription("");
-      setShowAddGame(false);
-      fetchGames(); // Refresh games
-      Alert.alert("Success", "Your game is now available for swapping!");
-    } catch (error) {
-      console.error("Error adding game:", error);
-      Alert.alert("Error", "Failed to add game");
-    }
-  };
-
-  const gameRows = [];
-  for (let i = 0; i < availableGames.length; i += 2) {
-    gameRows.push(availableGames.slice(i, i + 2));
+  const filteredGames = getFilteredGames();
+  const gameRows: (typeof GAMES)[] = [];
+  for (let i = 0; i < filteredGames.length; i += 2) {
+    gameRows.push(filteredGames.slice(i, i + 2));
   }
 
   return (
@@ -238,10 +153,16 @@ const Swap = () => {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Swap Center</Text>
           <TouchableOpacity
-            style={styles.filterBtn}
-            onPress={() => setShowAddGame(true)}
+            style={styles.addBtn}
+            onPress={() => {
+              if (!user) {
+                Alert.alert("Login Required", "Please login to add games");
+                return;
+              }
+              router.push("/add-game");
+            }}
           >
-            <Text style={styles.filterBtnIcon}>+</Text>
+            <Text style={styles.addBtnIcon}>+</Text>
           </TouchableOpacity>
         </View>
 
@@ -255,6 +176,11 @@ const Swap = () => {
             value={search}
             onChangeText={setSearch}
           />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Text style={{ color: "#8a9ab0", fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Filter Pills */}
@@ -266,17 +192,11 @@ const Swap = () => {
           {FILTERS.map((f) => (
             <TouchableOpacity
               key={f}
-              style={[
-                styles.filterPill,
-                activeFilter === f && styles.filterPillActive,
-              ]}
+              style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
               onPress={() => setActiveFilter(f)}
             >
               <Text
-                style={[
-                  styles.filterPillText,
-                  activeFilter === f && styles.filterPillTextActive,
-                ]}
+                style={[styles.filterPillText, activeFilter === f && styles.filterPillTextActive]}
               >
                 {f}
               </Text>
@@ -300,228 +220,111 @@ const Swap = () => {
             </View>
             <TouchableOpacity
               style={styles.swapAgainBtn}
-              onPress={handleSwapAgain}
+              onPress={() => router.push("/add-game")}
             >
               <Text style={styles.swapAgainIcon}>↻</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* My Games */}
+        {myGames.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Games ({myGames.length})</Text>
+            <FlatList
+              data={myGames}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
+              renderItem={({ item }) => (
+                <View style={styles.myGamePill}>
+                  <Text style={styles.myGamePillText}>{item.title}</Text>
+                  <Text style={styles.myGamePillPlatform}>{item.platform}</Text>
+                </View>
+              )}
+            />
+          </View>
+        )}
+
         {/* Available to Swap */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Available to Swap</Text>
-          {gameRows.map((row, rowIdx) => (
-            <View key={rowIdx} style={styles.gameRow}>
-              {row.map((game) => (
-                <View key={game.id} style={styles.gameCard}>
-                  {/* Cover Art */}
-                  <View
-                    style={[
-                      styles.gameCover,
-                      { backgroundColor: game.bgColor },
-                    ]}
-                  >
-                    <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
-                    <View
-                      style={[
-                        styles.gamePlatformBadge,
-                        { backgroundColor: game.platformColor },
-                      ]}
-                    >
-                      <Text style={styles.gamePlatformText}>
-                        {game.platform}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Info */}
-                  <View style={styles.gameInfo}>
-                    <Text style={styles.gameTitle} numberOfLines={1}>
-                      {game.title}
-                    </Text>
-                    {game.status === "available" ? (
-                      <Text style={styles.statusAvailable}>Available</Text>
-                    ) : (
-                      <Text style={styles.statusWaitlist}>
-                        Waitlist ({game.waitlistCount})
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* CTA Button */}
-                  {game.status === "available" ? (
-                    <TouchableOpacity
-                      style={styles.requestBtn}
-                      activeOpacity={0.85}
-                      onPress={() => handleRequestSwap(game)}
-                    >
-                      <Text style={styles.requestBtnText}>Request Swap</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.waitlistBtn}
-                      activeOpacity={0.85}
-                      onPress={() => handleJoinWaitlist(game.title)}
-                    >
-                      <Text style={styles.waitlistBtnText}>Join Waitlist</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-              {/* Fill empty slot if odd */}
-              {row.length === 1 && <View style={styles.gameCardPlaceholder} />}
+          <Text style={styles.sectionTitle}>
+            Available to Swap ({filteredGames.length})
+          </Text>
+          {filteredGames.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>🎮</Text>
+              <Text style={styles.emptyText}>No games found</Text>
+              <Text style={styles.emptySubtext}>Try a different filter or search</Text>
             </View>
-          ))}
+          ) : (
+            gameRows.map((row, rowIdx) => (
+              <View key={rowIdx} style={styles.gameRow}>
+                {row.map((game) => (
+                  <TouchableOpacity
+                    key={game.id}
+                    style={styles.gameCard}
+                    activeOpacity={0.9}
+                    onPress={() => handleGamePress(game)}
+                  >
+                    {/* Cover Art */}
+                    <View style={[styles.gameCover, { backgroundColor: game.bgColor }]}>
+                      <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
+                      <View style={[styles.gamePlatformBadge, { backgroundColor: game.platformColor }]}>
+                        <Text style={styles.gamePlatformText}>{game.platform}</Text>
+                      </View>
+                    </View>
+
+                    {/* Info */}
+                    <View style={styles.gameInfo}>
+                      <Text style={styles.gameTitle} numberOfLines={1}>
+                        {game.title}
+                      </Text>
+                      {game.status === "available" ? (
+                        <Text style={styles.statusAvailable}>● Available</Text>
+                      ) : (
+                        <Text style={styles.statusWaitlist}>
+                          ● Waitlist ({game.waitlistCount})
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* CTA Button */}
+                    {game.status === "available" ? (
+                      <TouchableOpacity
+                        style={styles.requestBtn}
+                        activeOpacity={0.85}
+                        onPress={() => handleGamePress(game)}
+                      >
+                        <Text style={styles.requestBtnText}>Request Swap</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.waitlistBtn}
+                        activeOpacity={0.85}
+                        onPress={() => handleJoinWaitlist(game.title)}
+                      >
+                        <Text style={styles.waitlistBtnText}>Join Waitlist</Text>
+                      </TouchableOpacity>
+                    )}
+                  </TouchableOpacity>
+                ))}
+                {row.length === 1 && <View style={styles.gameCardPlaceholder} />}
+              </View>
+            ))
+          )}
         </View>
 
         <View style={{ height: 20 }} />
       </ScrollView>
-
-      {/* Swap Request Modal */}
-      <Modal
-        visible={showSwapRequest}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowSwapRequest(false)}
-      >
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowSwapRequest(false)}>
-              <Text style={styles.modalCancelBtn}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Request Swap</Text>
-            <TouchableOpacity onPress={handleSwapRequestSubmit}>
-              <Text style={styles.modalSendBtn}>Send</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            {selectedGame && (
-              <View style={styles.selectedGameCard}>
-                <Text style={styles.selectedGameTitle}>
-                  {selectedGame.title}
-                </Text>
-                <Text style={styles.selectedGameOwner}>
-                  Owner: {selectedGame.owner.displayName}
-                </Text>
-                <Text style={styles.selectedGamePlatform}>
-                  {selectedGame.platform}
-                </Text>
-              </View>
-            )}
-
-            <Text style={styles.offerTitle}>Select your game to offer:</Text>
-            <FlatList
-              data={myGames}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.myGameCard,
-                    selectedMyGame?.id === item.id && styles.myGameCardSelected,
-                  ]}
-                  onPress={() => setSelectedMyGame(item)}
-                >
-                  <Text style={styles.myGameTitle}>{item.title}</Text>
-                  <Text style={styles.myGamePlatform}>{item.platform}</Text>
-                </TouchableOpacity>
-              )}
-              style={styles.myGamesList}
-            />
-          </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* Add Game Modal */}
-      <Modal
-        visible={showAddGame}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAddGame(false)}
-      >
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowAddGame(false)}>
-              <Text style={styles.modalCancelBtn}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add Game</Text>
-            <TouchableOpacity onPress={handleAddGameSubmit}>
-              <Text style={styles.modalSendBtn}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Game Title</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Enter game title"
-                placeholderTextColor="#64748b"
-                value={newGameTitle}
-                onChangeText={setNewGameTitle}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Platform</Text>
-              <View style={styles.platformOptions}>
-                {["PS5", "Xbox", "Switch", "PC"].map((platform) => (
-                  <TouchableOpacity
-                    key={platform}
-                    style={[
-                      styles.platformOption,
-                      newGamePlatform === platform &&
-                        styles.platformOptionSelected,
-                    ]}
-                    onPress={() => setNewGamePlatform(platform)}
-                  >
-                    <Text
-                      style={[
-                        styles.platformOptionText,
-                        newGamePlatform === platform &&
-                          styles.platformOptionTextSelected,
-                      ]}
-                    >
-                      {platform}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Description (Optional)</Text>
-              <TextInput
-                style={[styles.formInput, styles.formTextArea]}
-                placeholder="Describe your game condition, etc."
-                placeholderTextColor="#64748b"
-                multiline
-                numberOfLines={4}
-                value={newGameDescription}
-                onChangeText={setNewGameDescription}
-              />
-            </View>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-
-  // Header
+  safeArea: { flex: 1, backgroundColor: "#0a0f1a" },
+  scrollContent: { paddingBottom: 120 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -530,13 +333,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 18,
   },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  filterBtn: {
+  headerTitle: { color: "#ffffff", fontSize: 26, fontWeight: "900", letterSpacing: -0.5 },
+  addBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -544,12 +342,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  filterBtnIcon: {
-    color: "#ffffff",
-    fontSize: 18,
-  },
-
-  // Search
+  addBtnIcon: { color: "#ffffff", fontSize: 22, fontWeight: "700" },
   searchWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -563,24 +356,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1e2d45",
   },
-  searchIcon: {
-    fontSize: 15,
-    opacity: 0.5,
-  },
-  searchInput: {
-    flex: 1,
-    color: "#e2e8f0",
-    fontSize: 15,
-    padding: 0,
-  },
-
-  // Filter Pills
-  filterRow: {
-    paddingHorizontal: 20,
-    gap: 10,
-    paddingBottom: 4,
-    marginBottom: 8,
-  },
+  searchIcon: { fontSize: 15, opacity: 0.5 },
+  searchInput: { flex: 1, color: "#e2e8f0", fontSize: 15, padding: 0 },
+  filterRow: { paddingHorizontal: 20, gap: 10, paddingBottom: 4, marginBottom: 8 },
   filterPill: {
     paddingHorizontal: 18,
     paddingVertical: 9,
@@ -589,24 +367,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1e2d45",
   },
-  filterPillActive: {
-    backgroundColor: "#22ff88",
-    borderColor: "#22ff88",
-  },
-  filterPillText: {
-    color: "#8a9ab0",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  filterPillTextActive: {
-    color: "#0a0f1a",
-    fontWeight: "800",
-  },
-
-  // Section
-  section: {
-    marginBottom: 24,
-  },
+  filterPillActive: { backgroundColor: "#22ff88", borderColor: "#22ff88" },
+  filterPillText: { color: "#8a9ab0", fontSize: 14, fontWeight: "600" },
+  filterPillTextActive: { color: "#0a0f1a", fontWeight: "800" },
+  section: { marginBottom: 24 },
   sectionTitle: {
     color: "#ffffff",
     fontSize: 20,
@@ -615,8 +379,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     letterSpacing: -0.3,
   },
-
-  // Current Disc Card
   currentDiscCard: {
     marginHorizontal: 20,
     backgroundColor: "#0f1624",
@@ -636,18 +398,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  discCoverEmoji: {
-    fontSize: 32,
-  },
-  discInfo: {
-    flex: 1,
-    gap: 5,
-  },
-  discTitle: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  discCoverEmoji: { fontSize: 32 },
+  discInfo: { flex: 1, gap: 5 },
+  discTitle: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
   discPlatformBadge: {
     backgroundColor: "#003087",
     alignSelf: "flex-start",
@@ -655,16 +408,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  discPlatformText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  discDue: {
-    color: "#5a6a8a",
-    fontSize: 13,
-    fontWeight: "500",
-  },
+  discPlatformText: { color: "#ffffff", fontSize: 10, fontWeight: "800" },
+  discDue: { color: "#5a6a8a", fontSize: 13, fontWeight: "500" },
   swapAgainBtn: {
     width: 38,
     height: 38,
@@ -673,19 +418,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  swapAgainIcon: {
-    color: "#60a5fa",
-    fontSize: 20,
-    fontWeight: "700",
+  swapAgainIcon: { color: "#60a5fa", fontSize: 20, fontWeight: "700" },
+  myGamePill: {
+    backgroundColor: "#0f1624",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#1e2d45",
+    minWidth: 120,
   },
-
-  // Game Grid
-  gameRow: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 12,
-  },
+  myGamePillText: { color: "#ffffff", fontSize: 13, fontWeight: "700" },
+  myGamePillPlatform: { color: "#8a9ab0", fontSize: 11, marginTop: 2 },
+  gameRow: { flexDirection: "row", paddingHorizontal: 20, gap: 12, marginBottom: 12 },
   gameCard: {
     flex: 1,
     backgroundColor: "#0f1624",
@@ -694,18 +439,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1e2d45",
   },
-  gameCardPlaceholder: {
-    flex: 1,
-  },
-  gameCover: {
-    height: 170,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  gameCoverEmoji: {
-    fontSize: 64,
-  },
+  gameCardPlaceholder: { flex: 1 },
+  gameCover: { height: 170, alignItems: "center", justifyContent: "center", position: "relative" },
+  gameCoverEmoji: { fontSize: 64 },
   gamePlatformBadge: {
     position: "absolute",
     top: 8,
@@ -714,33 +450,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  gamePlatformText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  gameInfo: {
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 6,
-    gap: 3,
-  },
-  gameTitle: {
-    color: "#e2e8f0",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  statusAvailable: {
-    color: "#22ff88",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statusWaitlist: {
-    color: "#f59e0b",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  gamePlatformText: { color: "#ffffff", fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+  gameInfo: { paddingHorizontal: 10, paddingTop: 10, paddingBottom: 6, gap: 3 },
+  gameTitle: { color: "#e2e8f0", fontSize: 14, fontWeight: "700" },
+  statusAvailable: { color: "#22ff88", fontSize: 11, fontWeight: "600" },
+  statusWaitlist: { color: "#f59e0b", fontSize: 11, fontWeight: "600" },
   requestBtn: {
     backgroundColor: "#22ff88",
     marginHorizontal: 10,
@@ -749,11 +463,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: "center",
   },
-  requestBtnText: {
-    color: "#0a0f1a",
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  requestBtnText: { color: "#0a0f1a", fontSize: 13, fontWeight: "800" },
   waitlistBtn: {
     backgroundColor: "#2563eb",
     marginHorizontal: 10,
@@ -762,149 +472,11 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: "center",
   },
-  waitlistBtnText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-
-  // Modal Styles
-  modalSafeArea: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1e2d45",
-  },
-  modalCancelBtn: {
-    fontSize: 16,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  modalSendBtn: {
-    fontSize: 16,
-    color: "#22ff88",
-    fontWeight: "700",
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  selectedGameCard: {
-    backgroundColor: "#0f1624",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#22ff88",
-  },
-  selectedGameTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  selectedGameOwner: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 4,
-  },
-  selectedGamePlatform: {
-    fontSize: 12,
-    color: "#22ff88",
-    fontWeight: "600",
-  },
-  offerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: 12,
-  },
-  myGamesList: {
-    flex: 1,
-  },
-  myGameCard: {
-    backgroundColor: "#0f1624",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#1e2d45",
-  },
-  myGameCardSelected: {
-    borderColor: "#22ff88",
-    backgroundColor: "#0a1f1a",
-  },
-  myGameTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  myGamePlatform: {
-    fontSize: 12,
-    color: "#64748b",
-  },
-
-  // Add Game Form Styles
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-    marginBottom: 8,
-  },
-  formInput: {
-    backgroundColor: "#0f1624",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#1e2d45",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#ffffff",
-  },
-  formTextArea: {
-    height: 80,
-    textAlignVertical: "top",
-  },
-  platformOptions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  platformOption: {
-    backgroundColor: "#0f1624",
-    borderWidth: 1,
-    borderColor: "#1e2d45",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  platformOptionSelected: {
-    backgroundColor: "#22ff88",
-    borderColor: "#22ff88",
-  },
-  platformOptionText: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  platformOptionTextSelected: {
-    color: "#0a0f1a",
-  },
+  waitlistBtnText: { color: "#ffffff", fontSize: 13, fontWeight: "800" },
+  emptyState: { alignItems: "center", paddingVertical: 40, gap: 8 },
+  emptyEmoji: { fontSize: 48 },
+  emptyText: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
+  emptySubtext: { color: "#8a9ab0", fontSize: 13 },
 });
 
 export default Swap;

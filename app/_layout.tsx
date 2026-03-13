@@ -38,19 +38,39 @@ function AppNavigator() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        {user ? (
-          <>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-          </>
-        )}
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="notifications"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="game-detail"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="swap-request"
+          options={{ headerShown: false, animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="add-game"
+          options={{ headerShown: false, animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="new-post"
+          options={{ headerShown: false, animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="cart"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }

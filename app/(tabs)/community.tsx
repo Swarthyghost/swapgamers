@@ -1,21 +1,18 @@
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  addComment,
-  createPost,
   getPosts,
   likePost,
   unlikePost,
@@ -23,46 +20,44 @@ import {
 
 const FILTERS = ["Feed", "Top Gamers", "Game Reviews"];
 
-const POSTS = [
+// Fallback static posts when Firestore is empty
+const STATIC_POSTS = [
   {
     id: "1",
-    user: "Kwame K.",
-    avatar: "🧑🏾",
+    userName: "Kwame K.",
+    userAvatar: null,
     time: "2 hrs ago",
     rating: 5.0,
-    content:
-      "Just finished Spider-Man 2! What a masterpiece. The web-swinging mechanics are insane. Highly recommend swapping for this. 🔥",
+    content: "Just finished Spider-Man 2! What a masterpiece. The web-swinging mechanics are insane. Highly recommend swapping for this. 🔥",
     hasImage: true,
-    imageBg: "#1a1a1a",
+    imageBg: "#1a0a1a",
     imageEmoji: "🕷️",
     likes: 24,
-    comments: 5,
+    comments: [],
   },
   {
     id: "2",
-    user: "Ama S.",
-    avatar: "👩🏾",
+    userName: "Ama S.",
+    userAvatar: null,
     time: "5 hrs ago",
     rating: null,
-    content:
-      "Looking for someone to swap EA FC 24 for Mortal Kombat 1. Anyone in East Legon or Madina area? Hit me up!",
+    content: "Looking for someone to swap EA FC 24 for Mortal Kombat 1. Anyone in East Legon or Madina area? Hit me up!",
     hasImage: false,
     likes: 12,
-    comments: 8,
+    comments: [],
   },
   {
     id: "3",
-    user: "Yaw D.",
-    avatar: "👨🏾‍💼",
+    userName: "Yaw D.",
+    userAvatar: null,
     time: "1 day ago",
     rating: 4.5,
-    content:
-      "Cyberpunk 2077 on PS5 is a totally different experience now. The new updates fixed almost everything. Definitely a keeper for a while! 🦾",
+    content: "Cyberpunk 2077 on PS5 is a totally different experience now. The new updates fixed almost everything. Definitely a keeper for a while! 🦾",
     hasImage: true,
     imageBg: "#0a0a1a",
     imageEmoji: "🏍️",
     likes: 45,
-    comments: 12,
+    comments: [],
   },
 ];
 
@@ -71,8 +66,6 @@ const Community = () => {
   const [activeFilter, setActiveFilter] = useState("Feed");
   const [posts, setPosts] = useState<any[]>([]);
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
-  const [showNewPost, setShowNewPost] = useState(false);
-  const [newPostContent, setNewPostContent] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -82,9 +75,10 @@ const Community = () => {
   const fetchPosts = async () => {
     try {
       const fetchedPosts = await getPosts();
-      setPosts(fetchedPosts);
+      setPosts(fetchedPosts.length > 0 ? fetchedPosts : STATIC_POSTS);
     } catch (error) {
       console.error("Error fetching posts:", error);
+      setPosts(STATIC_POSTS);
     } finally {
       setLoading(false);
     }
@@ -95,81 +89,23 @@ const Community = () => {
       Alert.alert("Login Required", "Please login to like posts");
       return;
     }
-
-    try {
-      if (likedPosts.includes(postId)) {
-        await unlikePost(postId, user.uid);
-        setLikedPosts((prev) => prev.filter((id) => id !== postId));
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId ? { ...post, likes: post.likes - 1 } : post,
-          ),
-        );
-      } else {
-        await likePost(postId, user.uid);
-        setLikedPosts((prev) => [...prev, postId]);
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId ? { ...post, likes: post.likes + 1 } : post,
-          ),
-        );
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to like post");
+    if (likedPosts.includes(postId)) {
+      await unlikePost(postId, user.uid);
+      setLikedPosts((prev) => prev.filter((id) => id !== postId));
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId ? { ...post, likes: (post.likes || 0) - 1 } : post
+        )
+      );
+    } else {
+      await likePost(postId, user.uid);
+      setLikedPosts((prev) => [...prev, postId]);
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId ? { ...post, likes: (post.likes || 0) + 1 } : post
+        )
+      );
     }
-  };
-
-  const handleCreatePost = async () => {
-    if (!user) {
-      Alert.alert("Login Required", "Please login to create posts");
-      return;
-    }
-
-    if (!newPostContent.trim()) {
-      Alert.alert("Error", "Please enter post content");
-      return;
-    }
-
-    try {
-      const userData = await getUserData(user.uid);
-      await createPost({
-        userId: user.uid,
-        content: newPostContent.trim(),
-        userName: userData?.fullName || userData?.displayName || "Anonymous",
-        userAvatar: userData?.profileImage || null,
-      });
-
-      setNewPostContent("");
-      setShowNewPost(false);
-      fetchPosts(); // Refresh posts
-      Alert.alert("Success", "Post created successfully!");
-    } catch (error) {
-      Alert.alert("Error", "Failed to create post");
-    }
-  };
-
-  const handleComment = (postId: string) => {
-    Alert.prompt("Add Comment", "Enter your comment:", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Post",
-        onPress: async (comment) => {
-          if (!user || !comment?.trim()) return;
-
-          try {
-            await addComment(postId, {
-              userId: user.uid,
-              content: comment.trim(),
-              userName: "You", // Would get from user data
-            });
-            fetchPosts(); // Refresh posts
-            Alert.alert("Success", "Comment added!");
-          } catch (error) {
-            Alert.alert("Error", "Failed to add comment");
-          }
-        },
-      },
-    ]);
   };
 
   return (
@@ -185,7 +121,7 @@ const Community = () => {
           <Text style={styles.headerTitle}>Community</Text>
           <TouchableOpacity
             style={styles.bellBtn}
-            onPress={() => console.log("Community notifications pressed")}
+            onPress={() => router.push("/notifications")}
           >
             <Text style={styles.bellIcon}>🔔</Text>
           </TouchableOpacity>
@@ -204,12 +140,7 @@ const Community = () => {
               onPress={() => setActiveFilter(f)}
               activeOpacity={0.8}
             >
-              <Text
-                style={[
-                  styles.pillText,
-                  activeFilter === f && styles.pillTextActive,
-                ]}
-              >
+              <Text style={[styles.pillText, activeFilter === f && styles.pillTextActive]}>
                 {f}
               </Text>
             </TouchableOpacity>
@@ -224,14 +155,25 @@ const Community = () => {
             </View>
           ) : posts.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                No posts yet. Be the first to share!
-              </Text>
+              <Text style={styles.emptyEmoji}>🎮</Text>
+              <Text style={styles.emptyText}>No posts yet. Be the first to share!</Text>
+              <TouchableOpacity
+                style={styles.createFirstPost}
+                onPress={() => {
+                  if (!user) {
+                    Alert.alert("Login Required", "Please login to create posts");
+                    return;
+                  }
+                  router.push("/new-post");
+                }}
+              >
+                <Text style={styles.createFirstPostText}>Create Post</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             posts.map((post) => {
               const liked = likedPosts.includes(post.id);
-              const likeCount = post.likes + (liked ? 1 : 0);
+              const commentCount = Array.isArray(post.comments) ? post.comments.length : (post.comments || 0);
 
               return (
                 <View key={post.id} style={styles.post}>
@@ -240,39 +182,34 @@ const Community = () => {
                     <View style={styles.postUser}>
                       <View style={styles.postAvatar}>
                         <Text style={styles.postAvatarText}>
-                          {post.userAvatar
-                            ? "👤"
-                            : post.userName?.charAt(0)?.toUpperCase() || "?"}
+                          {(post.userName || post.authorName || "G").charAt(0).toUpperCase()}
                         </Text>
                       </View>
                       <View style={styles.postUserInfo}>
-                        <Text style={styles.postUserName}>{post.userName}</Text>
-                        <Text style={styles.postTime}>{post.time}</Text>
+                        <Text style={styles.postUserName}>
+                          {post.userName || post.authorName || "Gamer"}
+                        </Text>
+                        <Text style={styles.postTime}>
+                          {post.time || "Recently"}
+                        </Text>
                       </View>
                     </View>
                     {post.rating && (
                       <View style={styles.postRating}>
-                        <Text style={styles.postRatingText}>
-                          ⭐ {post.rating}
-                        </Text>
+                        <Text style={styles.postRatingText}>⭐ {post.rating}</Text>
                       </View>
                     )}
                   </View>
 
                   {/* Content */}
-                  <Text style={styles.postContent}>{post.content}</Text>
+                  <Text style={styles.postContent}>
+                    {post.content || post.title}
+                  </Text>
 
                   {/* Image */}
                   {post.hasImage && (
-                    <View
-                      style={[
-                        styles.postImage,
-                        { backgroundColor: post.imageBg },
-                      ]}
-                    >
-                      <Text style={styles.postImageEmoji}>
-                        {post.imageEmoji}
-                      </Text>
+                    <View style={[styles.postImage, { backgroundColor: post.imageBg || "#111827" }]}>
+                      <Text style={styles.postImageEmoji}>{post.imageEmoji || "🎮"}</Text>
                     </View>
                   )}
 
@@ -283,41 +220,27 @@ const Community = () => {
                       onPress={() => toggleLike(post.id)}
                       activeOpacity={0.7}
                     >
-                      <Text
-                        style={[
-                          styles.actionIcon,
-                          liked && styles.actionIconLiked,
-                        ]}
-                      >
-                        {liked ? "❤️" : "🤍"}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.actionCount,
-                          liked && styles.actionCountLiked,
-                        ]}
-                      >
-                        {likeCount}
+                      <Text style={styles.actionIcon}>{liked ? "❤️" : "🤍"}</Text>
+                      <Text style={[styles.actionCount, liked && styles.actionCountLiked]}>
+                        {post.likes || 0}
                       </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.actionBtn}
                       activeOpacity={0.7}
-                      onPress={() => handleComment(post.id)}
+                      onPress={() => Alert.alert("Comments", "Comment feature coming soon!")}
                     >
                       <Text style={styles.actionIcon}>💬</Text>
-                      <Text style={styles.actionCount}>{post.comments}</Text>
+                      <Text style={styles.actionCount}>{commentCount}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={styles.shareBtn}
                       activeOpacity={0.7}
-                      onPress={() =>
-                        Alert.alert("Share", "Share functionality coming soon!")
-                      }
+                      onPress={() => Alert.alert("Share", "Share functionality coming soon!")}
                     >
-                      <Text style={styles.shareIcon}>⟳</Text>
+                      <Text style={styles.shareIcon}>↗</Text>
                       <Text style={styles.shareText}>Share</Text>
                     </TouchableOpacity>
                   </View>
@@ -327,67 +250,30 @@ const Community = () => {
           )}
         </View>
 
-        <View style={{ height: 90 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating compose button */}
+      {/* Floating compose button - navigates to new-post screen */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
-        onPress={() => setShowNewPost(true)}
+        onPress={() => {
+          if (!user) {
+            Alert.alert("Login Required", "Please login to create posts");
+            return;
+          }
+          router.push("/new-post");
+        }}
       >
         <Text style={styles.fabIcon}>✏️</Text>
       </TouchableOpacity>
-
-      {/* New Post Modal */}
-      <Modal
-        visible={showNewPost}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowNewPost(false)}
-      >
-        <SafeAreaView style={styles.modalSafeArea}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowNewPost(false)}>
-              <Text style={styles.modalCancelBtn}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Create Post</Text>
-            <TouchableOpacity onPress={handleCreatePost}>
-              <Text style={styles.modalPostBtn}>Post</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            <TextInput
-              style={styles.postInput}
-              placeholder="Share your gaming experience..."
-              placeholderTextColor="#64748b"
-              multiline
-              value={newPostContent}
-              onChangeText={setNewPostContent}
-              autoFocus
-            />
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-
-  // Header
+  safeArea: { flex: 1, backgroundColor: "#0a0f1a" },
+  scrollContent: { paddingBottom: 120 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -396,12 +282,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 18,
   },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
+  headerTitle: { color: "#ffffff", fontSize: 28, fontWeight: "900", letterSpacing: -0.5 },
   bellBtn: {
     width: 44,
     height: 44,
@@ -410,16 +291,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bellIcon: {
-    fontSize: 18,
-  },
-
-  // Filter Pills
-  filterRow: {
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 20,
-  },
+  bellIcon: { fontSize: 18 },
+  filterRow: { paddingHorizontal: 20, gap: 10, marginBottom: 20 },
   pill: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -428,28 +301,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1e2d45",
   },
-  pillActive: {
-    backgroundColor: "#22ff88",
-    borderColor: "#22ff88",
-  },
-  pillText: {
-    color: "#8a9ab0",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  pillTextActive: {
-    color: "#0a0f1a",
-    fontWeight: "800",
-  },
-
-  // Feed
-  feed: {
-    paddingHorizontal: 16,
-    gap: 14,
-  },
-
-  // Post Card
-  postCard: {
+  pillActive: { backgroundColor: "#22ff88", borderColor: "#22ff88" },
+  pillText: { color: "#8a9ab0", fontSize: 14, fontWeight: "600" },
+  pillTextActive: { color: "#0a0f1a", fontWeight: "800" },
+  posts: { paddingHorizontal: 16, gap: 14 },
+  post: {
     backgroundColor: "#0f1624",
     borderRadius: 16,
     padding: 16,
@@ -457,88 +313,38 @@ const styles = StyleSheet.create({
     borderColor: "#1e2d45",
     gap: 12,
   },
-  postHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  postHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  avatar: {
+  postHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  postUser: { flexDirection: "row", alignItems: "center", gap: 10 },
+  postAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#1e2d45",
+    backgroundColor: "#1e3a5f",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#22ff88",
   },
-  avatarEmoji: {
-    fontSize: 28,
-  },
-  userName: {
-    color: "#e2e8f0",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  postTime: {
-    color: "#4a5568",
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 1,
-  },
-  ratingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+  postAvatarText: { color: "#22ff88", fontSize: 18, fontWeight: "800" },
+  postUserInfo: { gap: 2 },
+  postUserName: { color: "#e2e8f0", fontSize: 15, fontWeight: "700" },
+  postTime: { color: "#4a5568", fontSize: 12, fontWeight: "500" },
+  postRating: {
     backgroundColor: "#2563eb",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    gap: 4,
   },
-  ratingIcon: {
-    color: "#ffffff",
-    fontSize: 11,
-  },
-  ratingText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-
-  // Content
-  postContent: {
-    color: "#c8d0e0",
-    fontSize: 15,
-    lineHeight: 23,
-    fontWeight: "400",
-  },
-
-  // Image
+  postRatingText: { color: "#ffffff", fontSize: 13, fontWeight: "800" },
+  postContent: { color: "#c8d0e0", fontSize: 15, lineHeight: 23, fontWeight: "400" },
   postImage: {
     height: 200,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    position: "relative",
   },
-  postImageEmoji: {
-    fontSize: 80,
-  },
-  imageOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-
-  // Actions
+  postImageEmoji: { fontSize: 80 },
   postActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -547,40 +353,13 @@ const styles = StyleSheet.create({
     borderTopColor: "#1e2d45",
     gap: 20,
   },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  actionIcon: {
-    fontSize: 16,
-  },
-  actionIconLiked: {},
-  actionCount: {
-    color: "#6a7a9a",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  actionCountLiked: {
-    color: "#f87171",
-  },
-  shareBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginLeft: "auto",
-  },
-  shareIcon: {
-    color: "#6a7a9a",
-    fontSize: 16,
-  },
-  shareText: {
-    color: "#6a7a9a",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  // FAB
+  actionBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  actionIcon: { fontSize: 16 },
+  actionCount: { color: "#6a7a9a", fontSize: 14, fontWeight: "600" },
+  actionCountLiked: { color: "#f87171" },
+  shareBtn: { flexDirection: "row", alignItems: "center", gap: 5, marginLeft: "auto" },
+  shareIcon: { color: "#6a7a9a", fontSize: 16 },
+  shareText: { color: "#6a7a9a", fontSize: 14, fontWeight: "600" },
   fab: {
     position: "absolute",
     bottom: Platform.OS === "ios" ? 100 : 90,
@@ -597,74 +376,20 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  fabIcon: {
-    fontSize: 22,
+  fabIcon: { fontSize: 22 },
+  loadingContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40 },
+  loadingText: { color: "#64748b", fontSize: 16 },
+  emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60, gap: 12 },
+  emptyEmoji: { fontSize: 48 },
+  emptyText: { color: "#64748b", fontSize: 16, textAlign: "center" },
+  createFirstPost: {
+    backgroundColor: "#22ff88",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
   },
-
-  // Loading and Empty States
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  loadingText: {
-    color: "#64748b",
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: "#64748b",
-    fontSize: 16,
-    textAlign: "center",
-  },
-
-  // Modal Styles
-  modalSafeArea: {
-    flex: 1,
-    backgroundColor: "#0a0f1a",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1e2d45",
-  },
-  modalCancelBtn: {
-    fontSize: 16,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  modalPostBtn: {
-    fontSize: 16,
-    color: "#22ff88",
-    fontWeight: "700",
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  postInput: {
-    flex: 1,
-    color: "#ffffff",
-    fontSize: 16,
-    lineHeight: 24,
-    textAlignVertical: "top",
-    minHeight: 120,
-  },
+  createFirstPostText: { color: "#0a0f1a", fontSize: 14, fontWeight: "800" },
 });
 
 export default Community;
