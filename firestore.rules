@@ -26,9 +26,9 @@ service cloud.firestore {
       return rating is int && rating >= 1 && rating <= 5;
     }
     
-    function isRecent(timestamp) {
-      return timestamp <= request.time;
-    }
+    function isRecent(ts) {
+       return ts <= request.time; 
+       }
     
     // Users collection
     match /users/{userId} {
