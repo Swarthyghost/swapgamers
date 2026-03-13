@@ -2,15 +2,15 @@ import { router } from "expo-router";
 import { ArrowLeft, Bell, CreditCard, HelpCircle, Info, Lock, Shield } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function Settings() {
