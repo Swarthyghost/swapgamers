@@ -1,0 +1,260 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidEmail(email) {
+      return email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+    
+    function isValidPhone(phone) {
+      return phone.matches('^(\\+233|0)?[0-9]{9}$');
+    }
+    
+    function isValidMomoNumber(number) {
+      return number.matches('^(055|054|025|027|057|056|023|026)[0-9]{7}$');
+    }
+    
+    function isValidRating(rating) {
+      return rating is int && rating >= 1 && rating <= 5;
+    }
+    
+    function isRecent(timestamp) {
+      return timestamp <= request.time;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isAuthenticated() && 
+        isOwner(userId) &&
+        request.resource.data.keys().hasAll([
+          'uid', 'email', 'createdAt', 'lastLoginAt'
+        ]) &&
+        request.resource.data.uid == userId &&
+        isValidEmail(request.resource.data.email) &&
+        isRecent(request.resource.data.createdAt) &&
+        isRecent(request.resource.data.lastLoginAt);
+      
+      allow update: if isOwner(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'fullName', 'phone', 'momoNumber', 'momoProvider',
+          'profileImage', 'bio', 'location', 'preferredGames'
+        ]) &&
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']) == false ||
+         isValidPhone(request.resource.data.phone)) &&
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['momoNumber']) == false ||
+         isValidMomoNumber(request.resource.data.momoNumber));
+    }
+    
+    // Games collection
+    match /games/{gameId} {
+      allow read: if true; // Anyone can read available games
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll([
+          'title', 'description', 'platform', 'genre', 'releaseYear',
+          'owner', 'available', 'condition', 'location', 'createdAt'
+        ]) &&
+        request.resource.data.owner == request.auth.uid &&
+        request.resource.data.platform in ['ps4', 'ps5', 'xbox', 'switch', 'pc'] &&
+        request.resource.data.condition in ['new', 'like-new', 'good', 'fair'] &&
+        request.resource.data.releaseYear is int &&
+        request.resource.data.releaseYear >= 2000 &&
+        request.resource.data.releaseYear <= request.time.year &&
+        isRecent(request.resource.data.createdAt);
+      
+      allow update: if isAuthenticated() &&
+        resource.data.owner == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'imageUrl', 'available', 'condition', 'location'
+        ]);
+      
+      allow delete: if isAuthenticated() && resource.data.owner == request.auth.uid;
+    }
+    
+    // Swap Requests collection
+    match /swapRequests/{requestId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.requesterId == request.auth.uid || 
+         resource.data.ownerId == request.auth.uid);
+      
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll([
+          'gameId', 'requesterId', 'ownerId', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.requesterId == request.auth.uid &&
+        request.resource.data.ownerId != request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        isRecent(request.resource.data.createdAt) &&
+        isRecent(request.resource.data.updatedAt);
+      
+      allow update: if isAuthenticated() &&
+        (resource.data.requesterId == request.auth.uid || 
+         resource.data.ownerId == request.auth.uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'message', 'meetingLocation', 'meetingTime', 'updatedAt'
+        ]) &&
+        // Only owner can accept/reject
+        (resource.data.ownerId == request.auth.uid || 
+         (resource.data.requesterId == request.auth.uid && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['message', 'meetingLocation', 'meetingTime']))) &&
+        isRecent(request.resource.data.updatedAt);
+      
+      allow delete: if false; // Swap requests should not be deleted, only status updated
+    }
+    
+    // Swap History collection
+    match /swapHistory/{historyId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || 
+         resource.data.partnerId == request.auth.uid);
+      
+      allow create: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || 
+         resource.data.partnerId == request.auth.uid) &&
+        request.resource.data.keys().hasAll([
+          'userId', 'gameId', 'partnerId', 'partnerName', 'gameTitle', 
+          'type', 'status', 'completedAt'
+        ]) &&
+        request.resource.data.type in ['given', 'received'] &&
+        request.resource.data.status in ['completed', 'cancelled'] &&
+        isRecent(request.resource.data.completedAt);
+      
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || 
+         resource.data.partnerId == request.auth.uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'rating', 'review'
+        ]) &&
+        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['rating']) == false ||
+         isValidRating(request.resource.data.rating));
+      
+      allow delete: if false; // History should not be deleted
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true; // Anyone can read reviews
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll([
+          'reviewerId', 'reviewerName', 'revieweeId', 'rating', 
+          'comment', 'createdAt', 'helpful'
+        ]) &&
+        request.resource.data.reviewerId == request.auth.uid &&
+        request.resource.data.reviewerId != request.resource.data.revieweeId &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.comment.size() > 10 &&
+        request.resource.data.comment.size() <= 500 &&
+        isRecent(request.resource.data.createdAt);
+      
+      allow update: if isAuthenticated() &&
+        resource.data.reviewerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comment', 'rating']) &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.comment.size() > 10 &&
+        request.resource.data.comment.size() <= 500;
+      
+      allow delete: if isAuthenticated() && resource.data.reviewerId == request.auth.uid;
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true; // Anyone can read posts
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll([
+          'authorId', 'authorName', 'title', 'content', 'tags',
+          'likes', 'likedBy', 'comments', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.title.size() > 5 &&
+        request.resource.data.title.size() <= 100 &&
+        request.resource.data.content.size() > 20 &&
+        request.resource.data.content.size() <= 2000 &&
+        request.resource.data.tags is list &&
+        request.resource.data.tags.size() <= 5 &&
+        isRecent(request.resource.data.createdAt) &&
+        isRecent(request.resource.data.updatedAt);
+      
+      allow update: if isAuthenticated() &&
+        resource.data.authorId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'content', 'tags', 'updatedAt'
+        ]) &&
+        request.resource.data.title.size() > 5 &&
+        request.resource.data.title.size() <= 100 &&
+        request.resource.data.content.size() > 20 &&
+        request.resource.data.content.size() <= 2000 &&
+        request.resource.data.tags is list &&
+        request.resource.data.tags.size() <= 5 &&
+        isRecent(request.resource.data.updatedAt);
+      
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+    
+    // Game Reviews collection
+    match /gameReviews/{reviewId} {
+      allow read: if true; // Anyone can read game reviews
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll([
+          'gameId', 'gameTitle', 'reviewerId', 'reviewerName',
+          'rating', 'pros', 'cons', 'reviewText', 'createdAt', 'helpful'
+        ]) &&
+        request.resource.data.reviewerId == request.auth.uid &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.pros is list &&
+        request.resource.data.cons is list &&
+        request.resource.data.pros.size() <= 5 &&
+        request.resource.data.cons.size() <= 5 &&
+        request.resource.data.reviewText.size() > 20 &&
+        request.resource.data.reviewText.size() <= 1000 &&
+        isRecent(request.resource.data.createdAt);
+      
+      allow update: if isAuthenticated() &&
+        resource.data.reviewerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'rating', 'pros', 'cons', 'reviewText'
+        ]) &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.pros is list &&
+        request.resource.data.cons is list &&
+        request.resource.data.pros.size() <= 5 &&
+        request.resource.data.cons.size() <= 5 &&
+        request.resource.data.reviewText.size() > 20 &&
+        request.resource.data.reviewText.size() <= 1000;
+      
+      allow delete: if isAuthenticated() && resource.data.reviewerId == request.auth.uid;
+    }
+    
+    // User Activity collection
+    match /userActivity/{activityId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'userId', 'userName', 'type', 'description', 'createdAt'
+        ]) &&
+        request.resource.data.type in [
+          'swap_completed', 'game_added', 'review_given', 
+          'post_created', 'comment_liked'
+        ] &&
+        request.resource.data.description.size() > 5 &&
+        request.resource.data.description.size() <= 200 &&
+        isRecent(request.resource.data.createdAt);
+      
+      allow update: if false; // Activity should not be updated
+      allow delete: if false; // Activity should not be deleted
+    }
+    
+    // Deny all other reads/writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
