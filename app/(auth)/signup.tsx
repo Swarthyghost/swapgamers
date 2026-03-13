@@ -1,29 +1,32 @@
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import {
-    Eye,
-    EyeOff,
-    Gamepad2,
-    Lock,
-    Mail,
-    Phone,
-    Smartphone,
-    User,
+  Camera,
+  Eye,
+  EyeOff,
+  Gamepad2,
+  Lock,
+  Mail,
+  Phone,
+  Smartphone,
+  Upload,
+  User,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    Easing,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { signUp } from "../../lib/auth";
@@ -37,8 +40,38 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [momoNumber, setMomoNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { setUser } = useAuth();
+
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Sorry, we need camera roll permissions to make this work!",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Image picker error:", error);
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
 
   const handleSignup = async () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
@@ -58,13 +91,14 @@ const Signup = () => {
         fullName: fullName.trim(),
         phone: phone.trim(),
         momoNumber: momoNumber.trim(),
+        profileImage: profileImage,
         momoProvider:
           momoNumber.startsWith("055") || momoNumber.startsWith("025")
             ? "mtn"
             : "telecel",
       });
 
-      if (result.success) {
+      if (result.success && result.user) {
         setUser(result.user);
         router.replace("/(tabs)/home" as any);
       } else {
@@ -200,6 +234,31 @@ const Signup = () => {
           {/* --- MIDDLE FORM SECTION --- */}
           <View style={styles.formArea}>
             <View style={styles.form}>
+              {/* Profile Image Upload */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Profile Photo</Text>
+                <TouchableOpacity
+                  style={styles.profileImageContainer}
+                  onPress={pickImage}
+                  activeOpacity={0.8}
+                >
+                  {profileImage ? (
+                    <Image
+                      source={{ uri: profileImage }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <Camera size={32} color="#64748B" />
+                      <Text style={styles.profileImageText}>Add Photo</Text>
+                    </View>
+                  )}
+                  <View style={styles.uploadIcon}>
+                    <Upload size={16} color="#22FF88" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.fieldGroupRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
                   <Text style={styles.label}>Full Name</Text>
@@ -465,6 +524,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
+  },
+  profileImageContainer: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  profileImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  profileImageText: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  uploadIcon: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "#39FF14",
+    borderRadius: 12,
+    padding: 4,
   },
   inputWrapperHighlighted: {
     borderColor: "rgba(57, 255, 20, 0.4)",

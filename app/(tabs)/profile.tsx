@@ -1,18 +1,25 @@
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Image,
     SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
-import { getSwapHistory, getUserData, logOut } from "../../lib/auth";
+import {
+    getSwapHistory,
+    getUserData,
+    logOut,
+    updateUserData,
+} from "../../lib/auth";
 
 const SWAP_HISTORY = [
   {
@@ -81,6 +88,45 @@ const Profile = () => {
   const [userData, setUserData] = useState<any>(null);
   const [swapHistory, setSwapHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  const pickProfileImage = async () => {
+    try {
+      // Request permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Sorry, we need camera roll permissions to make this work!",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        setProfileImage(imageUri);
+
+        // Update user profile with new image
+        if (user) {
+          await updateUserData(user.uid, { profileImage: imageUri });
+          setUserData((prev) => ({ ...prev, profileImage: imageUri }));
+        }
+
+        Alert.alert("Success", "Profile photo updated!");
+      }
+    } catch (error) {
+      console.error("Profile image picker error:", error);
+      Alert.alert("Error", "Failed to update profile photo");
+    }
+  };
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
@@ -151,18 +197,44 @@ const Profile = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.settingsBtn}>
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() =>
+              Alert.alert(
+                "Settings",
+                "Settings panel coming soon!\n\nYou'll be able to:\n- Manage swap preferences\n- Set notification preferences\n- View swap history\n- Account settings",
+              )
+            }
+          >
             <Text style={styles.settingsBtnIcon}>⚙</Text>
           </TouchableOpacity>
         </View>
 
         {/* Profile Hero */}
         <View style={styles.profileHero}>
-          <View style={styles.avatarWrapper}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarEmoji}>👨🏾</Text>
+          <TouchableOpacity
+            style={styles.avatarWrapper}
+            onPress={pickProfileImage}
+            activeOpacity={0.8}
+          >
+            {userData?.profileImage || profileImage ? (
+              <Image
+                source={{ uri: userData?.profileImage || profileImage }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarEmoji}>
+                  {(userData?.fullName || userData?.displayName || "Gamer")
+                    .charAt(0)
+                    .toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.editIcon}>
+              <Text style={styles.editIconText}>📷</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <Text style={styles.profileName}>
             {userData.fullName || userData.displayName || "Gamer"}
           </Text>
@@ -205,7 +277,9 @@ const Profile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Subscription status</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => console.log("Manage subscription pressed")}
+            >
               <Text style={styles.sectionAction}>Manage</Text>
             </TouchableOpacity>
           </View>
@@ -244,7 +318,9 @@ const Profile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Swap history</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => console.log("View all swap history pressed")}
+            >
               <Text style={styles.sectionAction}>View all</Text>
             </TouchableOpacity>
           </View>
@@ -307,7 +383,9 @@ const Profile = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Purchase history</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => console.log("View receipts pressed")}
+            >
               <Text style={styles.sectionAction}>Receipts</Text>
             </TouchableOpacity>
           </View>
@@ -444,12 +522,27 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#1e2d45",
+    backgroundColor: "#0f1624",
+    borderWidth: 2,
+    borderColor: "#1e2d45",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "#22ff88",
-    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  editIcon: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "#39FF14",
+    borderRadius: 12,
+    padding: 4,
+  },
+  editIconText: {
+    fontSize: 12,
   },
   avatarEmoji: {
     fontSize: 52,

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     SafeAreaView,
     ScrollView,
@@ -8,7 +9,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserData } from "../../lib/auth";
@@ -67,6 +68,8 @@ const Home = () => {
   const [popularGames, setPopularGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeNav, setActiveNav] = useState("home");
+  const [showGameDetail, setShowGameDetail] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,6 +94,27 @@ const Home = () => {
 
     fetchData();
   }, [user]);
+
+  const handleGamePress = (game: any) => {
+    setSelectedGame(game);
+    setShowGameDetail(true);
+  };
+
+  const handleSwapRequest = () => {
+    if (!user) {
+      Alert.alert("Login Required", "Please login to request swaps");
+      return;
+    }
+    Alert.alert(
+      "Swap Request",
+      `Swap request sent for ${selectedGame?.title}!\n\nYou can now chat with the owner to discuss the swap.`,
+    );
+    setShowGameDetail(false);
+  };
+
+  const handleChatWithOwner = () => {
+    Alert.alert("Chat", `Chat feature coming soon for ${selectedGame?.title}!`);
+  };
 
   if (loading) {
     return (
@@ -133,7 +157,15 @@ const Home = () => {
               </View>
             </View>
           </View>
-          <TouchableOpacity style={styles.bellBtn}>
+          <TouchableOpacity
+            style={styles.bellBtn}
+            onPress={() =>
+              Alert.alert(
+                "Notifications",
+                "You have 3 new swap requests!\n\n- Kwame wants to swap FIFA 24\n- Ama requested Spider-Man 2\n- Yaw is interested in your PS5 games",
+              )
+            }
+          >
             <Text style={styles.bellIcon}>🔔</Text>
             <View style={styles.bellDot} />
           </TouchableOpacity>
@@ -159,10 +191,16 @@ const Home = () => {
                 Get 1 month free on Pro Plan
               </Text>
               <View style={styles.bannerBtns}>
-                <TouchableOpacity style={styles.bannerBtnPrimary}>
+                <TouchableOpacity
+                  style={styles.bannerBtnPrimary}
+                  onPress={() => console.log("Shop Now pressed")}
+                >
                   <Text style={styles.bannerBtnPrimaryText}>SHOP NOW</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.bannerBtnSecondary}>
+                <TouchableOpacity
+                  style={styles.bannerBtnSecondary}
+                  onPress={() => console.log("Learn More pressed")}
+                >
                   <Text style={styles.bannerBtnSecondaryText}>LEARN MORE</Text>
                 </TouchableOpacity>
               </View>
@@ -203,7 +241,9 @@ const Home = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Popular Games</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => console.log("See all games pressed")}
+            >
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -214,7 +254,11 @@ const Home = () => {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.gamesRow}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.gameCard} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={styles.gameCard}
+                activeOpacity={0.85}
+                onPress={() => handleGamePress(item)}
+              >
                 <View style={styles.gameImageWrapper}>
                   <View
                     style={[
@@ -242,7 +286,9 @@ const Home = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Shop Accessories</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => console.log("See all accessories pressed")}
+            >
               <Text style={styles.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -252,6 +298,12 @@ const Home = () => {
                 key={item.id}
                 style={styles.accessoryCard}
                 activeOpacity={0.85}
+                onPress={() =>
+                  Alert.alert(
+                    "Accessory Details",
+                    `${item.title}\n\nPrice: ${item.price}\nPlatform: ${item.platform}\n\nThis accessory is available for purchase or swap! Add it to your cart to get started.`,
+                  )
+                }
               >
                 <View style={styles.accessoryImageWrapper}>
                   <Text style={styles.accessoryEmoji}>
@@ -651,4 +703,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingBottom: 12,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0a0f1a",
+  },
 });
+
+export default Home;
