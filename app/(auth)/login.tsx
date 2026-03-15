@@ -1,26 +1,26 @@
 import { router } from "expo-router";
 import {
-    ArrowLeft,
-    Gamepad2,
-    HelpCircle,
-    Lock,
-    Mail,
+  ArrowLeft,
+  Gamepad2,
+  HelpCircle,
+  Lock,
+  Mail,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    Animated,
-    Dimensions,
-    Easing,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { signIn } from "../../lib/auth";
@@ -45,8 +45,8 @@ const Login = () => {
     try {
       const result = await signIn(identifier.trim(), password);
 
-      if (result.success) {
-        setUser(result.user);
+      if (result?.user) {
+        setUser(result.user || null);
         router.replace("/(tabs)/home" as any);
       } else {
         Alert.alert("Login Failed", result.error);

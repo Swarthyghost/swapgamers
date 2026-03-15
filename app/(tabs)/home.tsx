@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserData } from "../../lib/auth";
@@ -22,27 +23,30 @@ const POPULAR_GAMES = [
     platform: "PS5",
     platformColor: "#003087",
     emoji: "⚔️",
+    image: require("../../assets/images/god-of-war-ragnarok.png"),
     bgColor: "#0a1628",
     status: "available",
     owner: "Kwame",
   },
   {
     id: "2",
-    title: "FC Striker 24",
+    title: "FC 24",
     platform: "XBOX",
     platformColor: "#107C10",
     emoji: "⚽",
-    bgColor: "#0a2010",
+    image: require("../../assets/images/fc-24.jpg"),
+    bgColor: "#ffffff",
     status: "available",
     owner: "Ama",
   },
   {
     id: "3",
-    title: "Spider-Man 2",
+    title: "The Last of Us Part II",
     platform: "PS5",
     platformColor: "#003087",
-    emoji: "🕷️",
-    bgColor: "#1a0a1a",
+    emoji: "🎸",
+    image: require("../../assets/images/the-last-of-us-part-2.png"),
+    bgColor: "#1a1a1a",
     status: "waitlist",
     waitlistCount: 2,
     owner: "Yaw",
@@ -105,6 +109,7 @@ const Home = () => {
         platform: game.platform,
         platformColor: game.platformColor || "#003087",
         emoji: game.emoji || "🎮",
+        image: game.image as any,
         bgColor: game.bgColor || "#111827",
         status: game.status || "available",
         waitlistCount: game.waitlistCount || 0,
@@ -269,7 +274,15 @@ const Home = () => {
                     </Text>
                   </View>
                   <View style={styles.gameImagePlaceholder}>
-                    <Text style={styles.gameImageEmoji}>{item.emoji || "🎮"}</Text>
+                    {item.image ? (
+                      <Image
+                        source={typeof item.image === 'string' ? { uri: item.image } : item.image}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.gameImageEmoji}>{item.emoji || "🎮"}</Text>
+                    )}
                   </View>
                   {item.status === "available" ? (
                     <View style={styles.availableDot} />

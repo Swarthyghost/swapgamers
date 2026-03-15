@@ -82,7 +82,7 @@ const Signup = () => {
         fullName: fullName.trim(),
         phone: phone.trim(),
         momoNumber: momoNumber.trim(),
-        profileImage: profileImage,
+        profileImage: profileImage || undefined,
         momoProvider:
           momoNumber.startsWith("055") || momoNumber.startsWith("025")
             ? "mtn"

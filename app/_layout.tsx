@@ -7,6 +7,8 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+// @ts-ignore
+import { PaystackProvider } from "react-native-paystack-webview";
 import "./global.css";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -65,10 +67,6 @@ function AppNavigator() {
           name="settings"
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
-        <Stack.Screen
-          name="cart"
-          options={{ headerShown: false, animation: "slide_from_right" }}
-        />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>
@@ -78,7 +76,9 @@ function AppNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <AppNavigator />
+      <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
+        <AppNavigator />
+      </PaystackProvider>
     </AuthProvider>
   );
 }

@@ -1,16 +1,20 @@
 import React, { useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Image,
 } from "react-native";
+import { CheckCircle } from "lucide-react-native";
+// @ts-ignore
+import { usePaystack } from 'react-native-paystack-webview';
 
 const FILTERS = ["All", "Controllers", "Headsets", "Chargers", "Cables"];
 
@@ -22,7 +26,8 @@ const PRODUCTS = [
     platform: "PS5",
     platformColor: "#003087",
     emoji: "🎮",
-    bgColor: "#0d1a2e",
+    image: require("../../assets/images/ps5-controller.png"),
+    bgColor: "#ffffff",
   },
   {
     id: "2",
@@ -31,7 +36,8 @@ const PRODUCTS = [
     platform: "XBOX",
     platformColor: "#107C10",
     emoji: "🕹️",
-    bgColor: "#111111",
+    image: require("../../assets/images/xbox-controller.png"),
+    bgColor: "#ffffff",
   },
   {
     id: "3",
@@ -39,7 +45,8 @@ const PRODUCTS = [
     price: "GHS 1,400.00",
     platform: null,
     emoji: "🎧",
-    bgColor: "#0e1220",
+    image: require("../../assets/images/pulse-3d-headset.png"),
+    bgColor: "#ffffff",
   },
   {
     id: "4",
@@ -48,7 +55,8 @@ const PRODUCTS = [
     platform: "PS5",
     platformColor: "#003087",
     emoji: "🔌",
-    bgColor: "#0d1a2e",
+    image: require("../../assets/images/dualsense-charging-station.png"),
+    bgColor: "#ffffff",
   },
   {
     id: "5",
@@ -56,7 +64,8 @@ const PRODUCTS = [
     price: "GHS 1,250.00",
     platform: null,
     emoji: "🎧",
-    bgColor: "#0a150a",
+    image: require("../../assets/images/stealth-600-headset.png"),
+    bgColor: "#ffffff",
   },
   {
     id: "6",
@@ -64,7 +73,8 @@ const PRODUCTS = [
     price: "GHS 180.00",
     platform: null,
     emoji: "📺",
-    bgColor: "#12080a",
+    image: require("../../assets/images/hdmi-cable.png"),
+    bgColor: "#ffffff",
   },
 ];
 
@@ -72,6 +82,7 @@ const Shop = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleAdd = (product: any) => {
     const existingItem = cartItems.find((item) => item.id === product.id);
@@ -115,26 +126,40 @@ const Shop = () => {
       .toFixed(2);
   };
 
-  const handleCheckout = () => {
+  const { popup } = usePaystack();
+
+  const handlePay = () => {
+    const publicKey = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY;
+    const amount = Number(getTotalPrice());
+
+    console.log("[Checkout] Starting payment process");
+    console.log("[Checkout] Public Key defined:", !!publicKey);
+    console.log("[Checkout] Amount (GHS):", amount);
+
     if (cartItems.length === 0) {
       Alert.alert("Cart Empty", "Please add items to your cart first");
       return;
     }
-    Alert.alert(
-      "Checkout",
-      `Total: GHS ${getTotalPrice()}\nProceed to payment?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Pay Now",
-          onPress: () => {
-            Alert.alert("Success", "Order placed successfully!");
-            setCartItems([]);
-            setShowCart(false);
-          },
-        },
-      ],
-    );
+
+    if (!publicKey) {
+      Alert.alert("Configuration Error", "Paystack public key is not defined. Please check your .env file and restart the server.");
+      return;
+    }
+
+    popup.checkout({
+      email: "charlesnnamdi@example.com",
+      amount: amount,
+      onSuccess: (res: any) => {
+        console.log("[Checkout] Success:", res);
+        setCartItems([]);
+        setShowCart(false);
+        setShowSuccess(true);
+      },
+      onCancel: () => {
+        console.log("[Checkout] Cancelled");
+        Alert.alert("Payment Cancelled", "Your payment process was cancelled.");
+      }
+    });
   };
 
   const rows: (typeof PRODUCTS)[] = [];
@@ -206,7 +231,15 @@ const Shop = () => {
                         { backgroundColor: product.bgColor },
                       ]}
                     >
-                      <Text style={styles.cardEmoji}>{product.emoji}</Text>
+                      {product.image ? (
+                        <Image
+                          source={typeof product.image === 'number' ? product.image : { uri: product.image }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.cardEmoji}>{product.emoji}</Text>
+                      )}
                       {product.platform && (
                         <View
                           style={[
@@ -328,16 +361,47 @@ const Shop = () => {
                     GHS {getTotalPrice()}
                   </Text>
                 </View>
+
                 <TouchableOpacity
                   style={styles.checkoutBtn}
-                  onPress={handleCheckout}
+                  onPress={handlePay}
                 >
-                  <Text style={styles.checkoutBtnText}>Checkout</Text>
+                  <Text style={styles.checkoutBtnText}>Checkout (Paystack)</Text>
                 </TouchableOpacity>
               </View>
             </>
           )}
         </SafeAreaView>
+      </Modal>
+
+      {/* Success Overlay */}
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSuccess(false)}
+      >
+        <TouchableOpacity
+          style={styles.successOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSuccess(false)}
+        >
+          <View style={styles.successCard}>
+            <View style={styles.successIconContainer}>
+              <CheckCircle size={80} color="#22ff88" strokeWidth={2.5} />
+            </View>
+            <Text style={styles.successTitle}>Payment Successful!</Text>
+            <Text style={styles.successSubtitle}>
+              Your order has been placed. You'll receive a confirmation email shortly.
+            </Text>
+            <TouchableOpacity
+              style={styles.successDoneBtn}
+              onPress={() => setShowSuccess(false)}
+            >
+              <Text style={styles.successDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -657,6 +721,62 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkoutBtnText: {
+    color: "#0a0f1a",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  // Success Overlay
+  successOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(10, 15, 26, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+  successCard: {
+    width: "100%",
+    backgroundColor: "#0f1624",
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(34, 255, 136, 0.2)",
+    shadowColor: "#22ff88",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  successIconContainer: {
+    marginBottom: 24,
+    backgroundColor: "rgba(34, 255, 136, 0.1)",
+    padding: 20,
+    borderRadius: 40,
+  },
+  successTitle: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "900",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  successSubtitle: {
+    color: "#8a9ab0",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  successDoneBtn: {
+    backgroundColor: "#22ff88",
+    paddingHorizontal: 48,
+    paddingVertical: 16,
+    borderRadius: 14,
+    width: "100%",
+    alignItems: "center",
+  },
+  successDoneBtnText: {
     color: "#0a0f1a",
     fontSize: 16,
     fontWeight: "800",

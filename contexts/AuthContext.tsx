@@ -13,7 +13,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAuthenticated: false,
-  setUser: () => {},
+  setUser: () => { },
 });
 
 export const useAuth = () => {
@@ -31,7 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("[AuthContext] Setting up onAuthStateChanged listener");
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("[AuthContext] Auth state changed. User:", user ? user.email : "null");
       setUser(user);
       setLoading(false);
     });

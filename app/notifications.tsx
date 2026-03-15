@@ -16,7 +16,7 @@ const NOTIFICATIONS = [
     id: "1",
     type: "swap",
     title: "New Swap Request",
-    message: "Kwame wants to swap FIFA 24 for your God of War",
+    message: "Kwame wants to swap FIFA 24 for your God of War Ragnarök",
     time: "2 min ago",
     read: false,
     icon: "swap",

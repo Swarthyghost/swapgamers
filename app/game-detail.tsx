@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -26,6 +27,7 @@ export default function GameDetail() {
     emoji: params.emoji as string || "🎮",
     bgColor: params.bgColor as string || "#111827",
     status: params.status as string || "available",
+    image: params.image,
     waitlistCount: params.waitlistCount ? Number(params.waitlistCount) : 0,
     owner: params.owner as string || "Unknown",
   };
@@ -42,6 +44,7 @@ export default function GameDetail() {
         gameTitle: game.title,
         gamePlatform: game.platform,
         gameOwner: game.owner,
+        gameImage: game.image as any,
       },
     });
   };
@@ -68,7 +71,15 @@ export default function GameDetail() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={[styles.gameCover, { backgroundColor: game.bgColor }]}>
-          <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
+          {game.image ? (
+            <Image
+              source={!isNaN(Number(game.image)) ? Number(game.image) : { uri: game.image as string }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
+          )}
           <View style={[styles.platformBadge, { backgroundColor: game.platformColor }]}>
             <Text style={styles.platformText}>{game.platform}</Text>
           </View>
@@ -107,9 +118,6 @@ export default function GameDetail() {
             <Text style={styles.ownerName}>{game.owner}</Text>
             <Text style={styles.ownerBadge}>⭐ 4.8 · 14 swaps completed</Text>
           </View>
-          <TouchableOpacity style={styles.chatBtn} onPress={() => Alert.alert("Chat", `Chat with ${game.owner} coming soon!`)}>
-            <Text style={styles.chatBtnText}>Chat</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.detailsCard}>
@@ -189,8 +197,6 @@ const styles = StyleSheet.create({
   ownerInfo: { flex: 1 },
   ownerName: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
   ownerBadge: { color: "#8a9ab0", fontSize: 12 },
-  chatBtn: { backgroundColor: "#2563eb", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  chatBtnText: { color: "#ffffff", fontSize: 13, fontWeight: "700" },
   detailsCard: { marginHorizontal: 20, backgroundColor: "#0f1624", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#1e2d45", marginBottom: 12 },
   detailsTitle: { color: "#ffffff", fontSize: 16, fontWeight: "800", marginBottom: 12 },
   detailRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },

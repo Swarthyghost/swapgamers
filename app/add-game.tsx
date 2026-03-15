@@ -69,7 +69,7 @@ export default function AddGame() {
         genre: [],
         releaseYear: new Date().getFullYear(),
         rating: 0,
-        imageUrl: null,
+        imageUrl: undefined,
         location: "Accra, Ghana",
       });
 

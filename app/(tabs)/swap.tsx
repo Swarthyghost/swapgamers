@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserGames } from "../../lib/game-swaps";
@@ -25,6 +26,7 @@ const GAMES = [
     platformColor: "#003087",
     status: "available",
     emoji: "⚔️",
+    image: require("../../assets/images/god-of-war-ragnarok.png"),
     bgColor: "#0a1628",
     owner: "Kwame",
   },
@@ -35,7 +37,8 @@ const GAMES = [
     platformColor: "#107C10",
     status: "available",
     emoji: "🚗",
-    bgColor: "#0d1a10",
+    image: require("../../assets/images/forza-horizon-5.png"),
+    bgColor: "#e0f2fe",
     owner: "Ama",
   },
   {
@@ -46,7 +49,8 @@ const GAMES = [
     status: "waitlist",
     waitlistCount: 2,
     emoji: "🎸",
-    bgColor: "#1a1008",
+    image: require("../../assets/images/the-last-of-us-part-2.png"),
+    bgColor: "#1a1a1a",
     owner: "Yaw",
   },
   {
@@ -56,6 +60,7 @@ const GAMES = [
     platformColor: "#107C10",
     status: "available",
     emoji: "🌌",
+    image: require("../../assets/images/starfield.jpg"),
     bgColor: "#080d1a",
     owner: "Kofi",
   },
@@ -116,6 +121,7 @@ const Swap = () => {
         platform: game.platform,
         platformColor: game.platformColor,
         emoji: game.emoji,
+        image: game.image as any,
         bgColor: game.bgColor,
         status: game.status,
         waitlistCount: game.waitlistCount || 0,
@@ -270,7 +276,15 @@ const Swap = () => {
                   >
                     {/* Cover Art */}
                     <View style={[styles.gameCover, { backgroundColor: game.bgColor }]}>
-                      <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
+                      {game.image ? (
+                        <Image
+                          source={typeof game.image === 'string' ? { uri: game.image } : game.image}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.gameCoverEmoji}>{game.emoji}</Text>
+                      )}
                       <View style={[styles.gamePlatformBadge, { backgroundColor: game.platformColor }]}>
                         <Text style={styles.gamePlatformText}>{game.platform}</Text>
                       </View>

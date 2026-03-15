@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { createSwapRequest, getUserGames } from "../lib/game-swaps";
@@ -29,6 +30,7 @@ export default function SwapRequest() {
     title: params.gameTitle as string || "Unknown Game",
     platform: params.gamePlatform as string || "PS5",
     owner: params.gameOwner as string || "Unknown",
+    image: params.gameImage,
   };
 
   useEffect(() => {
@@ -101,8 +103,16 @@ export default function SwapRequest() {
             <View style={styles.requestingCard}>
               <Text style={styles.requestingLabel}>You're requesting:</Text>
               <View style={styles.requestingGame}>
-                <View style={styles.requestingGameIcon}>
-                  <Text style={styles.requestingGameEmoji}>🎮</Text>
+                <View style={[styles.requestingGameIcon, { overflow: 'hidden' }]}>
+                  {game.image ? (
+                    <Image
+                      source={!isNaN(Number(game.image)) ? Number(game.image) : { uri: game.image as string }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.requestingGameEmoji}>🎮</Text>
+                  )}
                 </View>
                 <View style={styles.requestingGameInfo}>
                   <Text style={styles.requestingGameTitle}>{game.title}</Text>
